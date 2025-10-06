@@ -88,6 +88,113 @@ def simple_validation(device_ip: str, device_type: str, hostname: str = None, li
     
     return results
 
+async def generate_simulated_validation_results(request: Dict[str, Any]):
+    """Generate realistic simulated validation results for development"""
+    import random
+    import asyncio
+    
+    scenario_id = request.get("scenario_id", "dmu_basic_check")
+    ip_address = request.get("ip_address", "192.168.11.22")
+    
+    # Simulate processing time
+    await asyncio.sleep(random.uniform(2, 5))
+    
+    # Generate realistic test results based on scenario
+    tests = []
+    
+    if scenario_id == "dmu_basic_check":
+        tests = [
+            {
+                "name": "Network Connectivity",
+                "status": "PASS",
+                "message": "Device responds to ping",
+                "duration_ms": random.randint(50, 200)
+            },
+            {
+                "name": "Modbus TCP Connection",
+                "status": "PASS", 
+                "message": "Successfully connected to Modbus TCP port 502",
+                "duration_ms": random.randint(100, 500)
+            },
+            {
+                "name": "Device Identification",
+                "status": "PASS",
+                "message": "Device ID: DMU-2024-v1.2.3",
+                "duration_ms": random.randint(200, 800)
+            },
+            {
+                "name": "Register Read Test",
+                "status": random.choice(["PASS", "PASS", "PASS", "FAIL"]),  # 75% success rate
+                "message": "Read holding registers 40001-40010",
+                "duration_ms": random.randint(150, 600)
+            }
+        ]
+    elif scenario_id == "dru_remote_check":
+        tests = [
+            {
+                "name": "Remote Unit Discovery",
+                "status": "PASS",
+                "message": "Found 3 remote units",
+                "duration_ms": random.randint(500, 1500)
+            },
+            {
+                "name": "Signal Quality Check",
+                "status": "PASS",
+                "message": "Signal strength: -45 dBm (Good)",
+                "duration_ms": random.randint(300, 800)
+            },
+            {
+                "name": "Data Transmission Test",
+                "status": random.choice(["PASS", "PASS", "FAIL"]),  # 66% success rate
+                "message": "Bidirectional data test",
+                "duration_ms": random.randint(800, 2000)
+            }
+        ]
+    elif scenario_id == "batch_remote_commands":
+        # Generate multiple command tests
+        commands = ["Status Query", "Reset Command", "Config Read", "Diagnostic", "Version Check"]
+        for cmd in commands:
+            tests.append({
+                "name": f"Remote Command: {cmd}",
+                "status": random.choice(["PASS", "PASS", "PASS", "FAIL"]),  # 75% success rate
+                "message": f"Executed {cmd.lower()}",
+                "duration_ms": random.randint(200, 1000)
+            })
+    else:
+        # Generic device discovery
+        tests = [
+            {
+                "name": "Network Scan",
+                "status": "PASS",
+                "message": f"Discovered device at {ip_address}",
+                "duration_ms": random.randint(1000, 3000)
+            },
+            {
+                "name": "Protocol Detection",
+                "status": "PASS",
+                "message": "Modbus TCP protocol detected",
+                "duration_ms": random.randint(500, 1200)
+            }
+        ]
+    
+    # Calculate overall status
+    passed_tests = len([t for t in tests if t["status"] == "PASS"])
+    total_tests = len(tests)
+    overall_status = "PASS" if passed_tests / total_tests >= 0.8 else "FAIL"
+    
+    return JSONResponse({
+        "status": "completed",
+        "overall_status": overall_status,
+        "message": f"Simulated validation completed: {passed_tests}/{total_tests} tests passed",
+        "device_ip": ip_address,
+        "scenario": scenario_id,
+        "mode": "simulated",
+        "timestamp": datetime.now().isoformat(),
+        "tests": tests,
+        "simulation": True,
+        "total_duration_ms": sum(t["duration_ms"] for t in tests)
+    })
+
 # FastAPI app instance
 app = FastAPI(
     title="DRS Device Validation Tool",
@@ -372,8 +479,14 @@ async def root(request: Request):
 
 @app.get("/api/test")
 async def test_endpoint():
-    """Simple test endpoint to verify API is working"""
-    return {"status": "success", "message": "API is working", "timestamp": datetime.now().isoformat()}
+    """Test endpoint to verify API functionality"""
+    simulation_mode = os.environ.get('SIMULATION_MODE', 'false').lower() == 'true'
+    return {
+        "status": "success",
+        "message": "API is working",
+        "simulation_mode": simulation_mode,
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 @app.get("/api/validation/scenarios")
@@ -416,6 +529,13 @@ async def get_validation_scenarios():
 async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTasks):
     """Execute device validation with current configuration and real-time logging"""
     try:
+        # Check if running in simulation mode
+        simulation_mode = os.environ.get('SIMULATION_MODE', 'false').lower() == 'true'
+        
+        if simulation_mode:
+            # Return simulated validation results immediately
+            return await generate_simulated_validation_results(request)
+        
         # Check if request wants WebSocket logging (new functionality)
         use_websockets = request.get("use_websockets", True)  # Default to new behavior
         
@@ -587,8 +707,56 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
 async def ping_device_endpoint(ip_address: str):
     """Test basic network connectivity to device"""
     try:
+        # Check if running in simulation mode
+        simulation_mode = os.environ.get('SIMULATION_MODE', 'false').lower() == 'true'
+        
+        if simulation_mode:
+            # Simulate different responses based on IP for testing
+            import random
+            
+            # Simulate different scenarios based on IP
+            if ip_address.endswith('.22'):
+                # Simulate successful Modbus device
+                return {
+                    "status": "PASS",
+                    "ip_address": ip_address,
+                    "message": f"✅ Device at {ip_address} is reachable (Simulated Modbus device)",
+                    "timestamp": datetime.now().isoformat(),
+                    "simulation": True,
+                    "device_type": "Modbus RTU/TCP Gateway"
+                }
+            elif ip_address.endswith('.1') or ip_address == '127.0.0.1':
+                # Simulate network gateway or localhost
+                return {
+                    "status": "PASS",
+                    "ip_address": ip_address,
+                    "message": f"✅ Device at {ip_address} is reachable (Simulated gateway)",
+                    "timestamp": datetime.now().isoformat(),
+                    "simulation": True,
+                    "device_type": "Network Gateway"
+                }
+            elif random.choice([True, False]):
+                # Random success for variety
+                return {
+                    "status": "PASS",
+                    "ip_address": ip_address,
+                    "message": f"✅ Device at {ip_address} is reachable (Simulated device)",
+                    "timestamp": datetime.now().isoformat(),
+                    "simulation": True,
+                    "device_type": "Industrial Device"
+                }
+            else:
+                # Simulate timeout/failure
+                return {
+                    "status": "FAIL",
+                    "ip_address": ip_address,
+                    "message": f"❌ Device at {ip_address} timeout (Simulated offline device)",
+                    "timestamp": datetime.now().isoformat(),
+                    "simulation": True
+                }
+
+        # Original logic for non-simulation mode
         # Check if running in Docker container
-        import os
         is_docker = os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER', False)
 
         if VALIDATION_AVAILABLE and not is_docker:

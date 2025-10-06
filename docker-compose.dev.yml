@@ -13,3 +13,4 @@ services:
       - FLASK_ENV=development
       - LOG_LEVEL=debug
       - DOCKER_CONTAINER=true  # Flag to indicate running in Docker
+      - SIMULATION_MODE=true   # Enable simulated data for development
