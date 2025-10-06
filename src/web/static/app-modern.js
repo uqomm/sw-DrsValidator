@@ -64,11 +64,6 @@ class DRSValidatorUI {
             this.startValidation();
         });
 
-        // Pre-validation button
-        document.getElementById('preValidateBtn').addEventListener('click', () => {
-            this.preValidateConnection();
-        });
-
         // Tab navigation
         document.querySelectorAll('[data-tab]').forEach(tab => {
             tab.addEventListener('click', (e) => {
@@ -282,42 +277,6 @@ class DRSValidatorUI {
     /* ========================================
        VALIDATION PROCESS
     ======================================== */
-    async preValidateConnection() {
-        const deviceIp = document.getElementById('deviceIp').value;
-        const devicePort = document.getElementById('devicePort').value;
-        
-        if (!deviceIp || !devicePort) {
-            this.showToast('error', 'Por favor complete IP y puerto antes de pre-validar');
-            return;
-        }
-
-        const btn = document.getElementById('preValidateBtn');
-        this.setButtonLoading(btn, true);
-        
-        try {
-            const response = await fetch('/api/prevalidate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    ip_address: deviceIp, 
-                    port: parseInt(devicePort) 
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                this.showToast('success', 'Conexión exitosa al dispositivo');
-            } else {
-                this.showToast('error', `Error de conexión: ${result.error}`);
-            }
-        } catch (error) {
-            this.showToast('error', 'Error al validar conexión');
-            console.error('Pre-validation error:', error);
-        } finally {
-            this.setButtonLoading(btn, false);
-        }
-    }
 
     async startValidation() {
         if (this.validationInProgress) {
