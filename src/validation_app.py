@@ -93,7 +93,7 @@ async def generate_simulated_validation_results(request: Dict[str, Any]):
     import random
     import asyncio
     
-    scenario_id = request.get("scenario_id", "dmu_basic_check")
+    scenario_id = request.get("scenario_id", "dru_remote_check")
     ip_address = request.get("ip_address", "192.168.11.22")
     
     # Simulate processing time
@@ -102,34 +102,7 @@ async def generate_simulated_validation_results(request: Dict[str, Any]):
     # Generate realistic test results based on scenario
     tests = []
     
-    if scenario_id == "dmu_basic_check":
-        tests = [
-            {
-                "name": "Network Connectivity",
-                "status": "PASS",
-                "message": "Device responds to ping",
-                "duration_ms": random.randint(50, 200)
-            },
-            {
-                "name": "Modbus TCP Connection",
-                "status": "PASS", 
-                "message": "Successfully connected to Modbus TCP port 502",
-                "duration_ms": random.randint(100, 500)
-            },
-            {
-                "name": "Device Identification",
-                "status": "PASS",
-                "message": "Device ID: DMU-2024-v1.2.3",
-                "duration_ms": random.randint(200, 800)
-            },
-            {
-                "name": "Register Read Test",
-                "status": random.choice(["PASS", "PASS", "PASS", "FAIL"]),  # 75% success rate
-                "message": "Read holding registers 40001-40010",
-                "duration_ms": random.randint(150, 600)
-            }
-        ]
-    elif scenario_id == "dru_remote_check":
+    if scenario_id == "dru_remote_check":
         tests = [
             {
                 "name": "Remote Unit Discovery",
@@ -495,15 +468,6 @@ async def get_validation_scenarios():
     return {
         "scenarios": [
             {
-                "id": "dmu_basic_check",
-                "name": "DMU Basic Communication",
-                "description": "Validates basic DMU device communication and monitoring",
-                "enabled": True,
-                "device_type": "dmu_ethernet",
-                "default_ip": "192.168.11.22",
-                "default_hostname": "dmu"
-            },
-            {
                 "id": "dru_remote_check", 
                 "name": "DRU Remote Device",
                 "description": "Validates DRU remote device communication",
@@ -562,7 +526,6 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
         # Get scenario details to determine device_type
         scenario_id = request["scenario_id"]
         device_type_mapping = {
-            "dmu_basic_check": "dmu_ethernet",
             "dru_remote_check": "dru_ethernet", 
             "device_discovery": "discovery_ethernet",
             "batch_remote_commands": "drs_remote"

@@ -36,27 +36,6 @@ class ValidationScenarios:
         return {
             "validation_scenarios": [
                 {
-                    "id": "dmu_basic_check",
-                    "name": "DMU Basic Communication Test",
-                    "description": "Verificar comunicación básica con dispositivo DMU",
-                    "device_config": {
-                        "device_type": "dmu_ethernet",
-                        "default_ip": "192.168.11.22",
-                        "default_hostname": "dmu",
-                        "cmd_type": "group_query",
-                        "thresholds": {
-                            "warning_downlink": 38,
-                            "warning_temperature": 45,
-                            "warning_uplink": 38,
-                            "critical_downlink": 41,
-                            "critical_temperature": 50,
-                            "critical_uplink": 31
-                        }
-                    },
-                    "modes": {"mock": True, "live": True},
-                    "enabled": True
-                },
-                {
                     "id": "dru_remote_check",
                     "name": "DRU Remote Device Test",
                     "description": "Verificar dispositivo DRU remoto",
