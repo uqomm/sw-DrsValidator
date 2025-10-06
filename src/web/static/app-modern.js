@@ -20,7 +20,6 @@ class DRSValidatorUI {
         this.loadSavedConfiguration(); // Load saved device configuration
         
         // Ensure validation tab is visible by default
-        console.log('Initializing default tab...');
         this.switchTab('validation');
         
         // Force device config panel visibility
@@ -160,8 +159,6 @@ class DRSValidatorUI {
        TAB NAVIGATION
     ======================================== */
     switchTab(tabId) {
-        console.log('switchTab called with:', tabId);
-        
         // Update active nav item in the sidebar
         document.querySelectorAll('.sidebar-nav-item').forEach(item => {
             item.classList.remove('active');
@@ -169,22 +166,15 @@ class DRSValidatorUI {
         const navItem = document.querySelector(`[data-tab="${tabId}"]`);
         if (navItem) {
             navItem.classList.add('active');
-            console.log('Added active class to nav item:', tabId);
-        } else {
-            console.log('Could not find nav item for:', tabId);
         }
 
         // Hide all tab content and then show the correct one using an 'active' class
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
-            console.log('Removed active class from:', content.id);
         });
         const tabContent = document.getElementById(tabId);
         if (tabContent) {
             tabContent.classList.add('active');
-            console.log('Added active class to content:', tabId);
-        } else {
-            console.log('Could not find tab content for:', tabId);
         }
         
         // Ensure device configuration panel is visible in validation tab
@@ -687,11 +677,14 @@ class DRSValidatorUI {
     async loadPreviousResults() {
         try {
             const response = await fetch('/api/results');
-            const results = await response.json();
+            const data = await response.json();
             
+            // Extract the actual results array from the API response
+            const results = data.results || [];
             this.updateResultsTable(results);
         } catch (error) {
             console.error('Error loading results:', error);
+            this.updateResultsTable([]);
         }
     }
 

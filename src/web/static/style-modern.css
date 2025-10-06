@@ -24,7 +24,7 @@
 
 /* Tab Content Visibility */
 .tab-content {
-  display: none;
+  display: none !important;
 }
 
 .tab-content.active {
@@ -391,11 +391,7 @@ body {
     display: block !important;
 }
 
-/* Tab content visibility override */
-.tab-content {
-    display: block !important;
-}
-
+/* Row layout for tab content */
 .tab-content .row {
     display: flex !important;
 }
