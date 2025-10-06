@@ -12,3 +12,4 @@ services:
       - PYTHONPATH=/app
       - FLASK_ENV=development
       - LOG_LEVEL=debug
+      - DOCKER_CONTAINER=true  # Flag to indicate running in Docker

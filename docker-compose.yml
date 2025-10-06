@@ -31,8 +31,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    networks:
-      - drs-network
 
   # Optional: Watchtower for automatic updates (production)
   watchtower:
@@ -44,12 +42,6 @@ services:
     restart: unless-stopped
     profiles:
       - production
-    networks:
-      - drs-network
-
-networks:
-  drs-network:
-    driver: bridge
 
 volumes:
   validation-data:

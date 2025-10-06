@@ -587,44 +587,90 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
 async def ping_device_endpoint(ip_address: str):
     """Test basic network connectivity to device"""
     try:
-        if VALIDATION_AVAILABLE:
+        # Check if running in Docker container
+        import os
+        is_docker = os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER', False)
+
+        if VALIDATION_AVAILABLE and not is_docker:
             validator = TechnicianTCPValidator()
             result = validator.ping_device(ip_address)
             return result
         else:
-            # Simple fallback ping using subprocess
-            import subprocess
-            import platform
-            
-            ping_cmd = ["ping", "-n", "1"] if platform.system() == "Windows" else ["ping", "-c", "1"]
-            ping_cmd.append(ip_address)
-            
+            # Docker-friendly connectivity test using TCP connection
+            import socket
+            import asyncio
+
             try:
-                result = subprocess.run(ping_cmd, capture_output=True, text=True, timeout=10)
-                if result.returncode == 0:
+                # Try to connect to common device ports (502 for Modbus, 80 for HTTP, etc.)
+                common_ports = [502, 80, 443, 23, 22]  # Modbus, HTTP, HTTPS, Telnet, SSH
+                connected = False
+
+                for port in common_ports:
+                    try:
+                        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        sock.settimeout(5)
+                        result = sock.connect_ex((ip_address, port))
+                        sock.close()
+
+                        if result == 0:
+                            connected = True
+                            break
+                    except:
+                        continue
+
+                if connected:
                     return {
                         "status": "PASS",
                         "ip_address": ip_address,
-                        "message": f"✅ Device at {ip_address} is reachable",
+                        "message": f"✅ Device at {ip_address} is reachable (TCP connection)",
                         "timestamp": datetime.now().isoformat()
                     }
                 else:
-                    return {
-                        "status": "FAIL",
-                        "ip_address": ip_address,
-                        "message": f"❌ Device at {ip_address} is not reachable",
-                        "timestamp": datetime.now().isoformat()
-                    }
-            except subprocess.TimeoutExpired:
+                    # Fallback to ping if TCP fails
+                    import subprocess
+                    import platform
+
+                    ping_cmd = ["ping", "-n", "1"] if platform.system() == "Windows" else ["ping", "-c", "1"]
+                    ping_cmd.append(ip_address)
+
+                    try:
+                        result = subprocess.run(ping_cmd, capture_output=True, text=True, timeout=10)
+                        if result.returncode == 0:
+                            return {
+                                "status": "PASS",
+                                "ip_address": ip_address,
+                                "message": f"✅ Device at {ip_address} is reachable (ping)",
+                                "timestamp": datetime.now().isoformat()
+                            }
+                        else:
+                            return {
+                                "status": "FAIL",
+                                "ip_address": ip_address,
+                                "message": f"❌ Device at {ip_address} is not reachable",
+                                "timestamp": datetime.now().isoformat()
+                            }
+                    except subprocess.TimeoutExpired:
+                        return {
+                            "status": "FAIL",
+                            "ip_address": ip_address,
+                            "message": f"❌ Ping timeout for {ip_address}",
+                            "timestamp": datetime.now().isoformat()
+                        }
+
+            except Exception as e:
                 return {
                     "status": "FAIL",
                     "ip_address": ip_address,
-                    "message": "❌ Ping timeout - device not responding",
+                    "message": f"❌ Connection test failed: {str(e)}",
                     "timestamp": datetime.now().isoformat()
                 }
-                
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ping test failed: {str(e)}")
+        return {
+            "status": "ERROR",
+            "ip_address": ip_address,
+            "message": f"❌ Ping test error: {str(e)}",
+            "timestamp": datetime.now().isoformat()
+        }
 
 
 # New endpoints for real-time logging
