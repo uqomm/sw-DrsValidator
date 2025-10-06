@@ -787,6 +787,11 @@ async def get_batch_commands_status():
     }
 
 
+@app.get("/api/results")
+async def get_results() -> Dict[str, Any]:
+    """Get validation results (alias for history endpoint)"""
+    return await get_results_history()
+
 @app.get("/api/results/history")
 async def get_results_history(limit: int = 50) -> Dict[str, Any]:
     """Get validation results history"""

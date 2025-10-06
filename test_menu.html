@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Menu Functionality</title>
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block !important; }
+        .sidebar-nav-item { padding: 10px; background: #f0f0f0; margin: 5px; cursor: pointer; }
+        .sidebar-nav-item.active { background: #007bff; color: white; }
+    </style>
+</head>
+<body>
+    <h1>Test Menu Functionality</h1>
+    
+    <!-- Menu items -->
+    <div>
+        <div class="sidebar-nav-item active" data-tab="validation">Validación</div>
+        <div class="sidebar-nav-item" data-tab="results">Resultados</div>
+        <div class="sidebar-nav-item" data-tab="batch">Comandos Batch</div>
+    </div>
+    
+    <!-- Content sections -->
+    <div id="validation" class="tab-content active">
+        <h2>Sección de Validación</h2>
+        <p>Este es el contenido de validación.</p>
+    </div>
+    
+    <div id="results" class="tab-content">
+        <h2>Sección de Resultados</h2>
+        <p>Este es el contenido de resultados.</p>
+    </div>
+    
+    <div id="batch" class="tab-content">
+        <h2>Sección de Comandos Batch</h2>
+        <p>Este es el contenido de comandos batch.</p>
+    </div>
+
+    <script>
+        // Tab navigation logic (same as app-modern.js)
+        function switchTab(tabId) {
+            console.log('Switching to tab:', tabId);
+            
+            // Update active nav item
+            document.querySelectorAll('.sidebar-nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabId}"]`)?.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabId)?.classList.add('active');
+        }
+
+        // Setup event listeners
+        document.querySelectorAll('[data-tab]').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tabId = e.currentTarget.dataset.tab;
+                switchTab(tabId);
+            });
+        });
+        
+        console.log('Test page loaded');
+    </script>
+</body>
+</html>

@@ -18,7 +18,27 @@
   --color-primary-500: #3b82f6;
   --color-primary-600: #2563eb;
   --color-primary-700: #1d4ed8;
-  --color-primary-800: #1e40af;
+ /* Utility Classes */
+.d-none { display: none !important; }
+.d-block { display: block !important; }
+
+/* Tab Content Visibility */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block !important;
+}
+
+@media (max-width: 767px) {
+  .d-md-none { display: none !important; }
+}
+
+@media (min-width: 768px) {
+  .d-md-block { display: block !important; }
+  .d-md-flex { display: flex !important; }
+}mary-800: #1e40af;
   --color-primary-900: #1e3a8a;
 
   /* Secondary Colors - Modern Gray */

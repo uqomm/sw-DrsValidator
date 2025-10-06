@@ -20,6 +20,7 @@ class DRSValidatorUI {
         this.loadSavedConfiguration(); // Load saved device configuration
         
         // Ensure validation tab is visible by default
+        console.log('Initializing default tab...');
         this.switchTab('validation');
         
         // Force device config panel visibility
@@ -159,17 +160,32 @@ class DRSValidatorUI {
        TAB NAVIGATION
     ======================================== */
     switchTab(tabId) {
-        // Update active nav item
+        console.log('switchTab called with:', tabId);
+        
+        // Update active nav item in the sidebar
         document.querySelectorAll('.sidebar-nav-item').forEach(item => {
             item.classList.remove('active');
         });
-        document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+        const navItem = document.querySelector(`[data-tab="${tabId}"]`);
+        if (navItem) {
+            navItem.classList.add('active');
+            console.log('Added active class to nav item:', tabId);
+        } else {
+            console.log('Could not find nav item for:', tabId);
+        }
 
-        // Update tab content
+        // Hide all tab content and then show the correct one using an 'active' class
         document.querySelectorAll('.tab-content').forEach(content => {
-            content.style.display = 'none';
+            content.classList.remove('active');
+            console.log('Removed active class from:', content.id);
         });
-        document.getElementById(tabId).style.display = 'block';
+        const tabContent = document.getElementById(tabId);
+        if (tabContent) {
+            tabContent.classList.add('active');
+            console.log('Added active class to content:', tabId);
+        } else {
+            console.log('Could not find tab content for:', tabId);
+        }
         
         // Ensure device configuration panel is visible in validation tab
         if (tabId === 'validation') {
