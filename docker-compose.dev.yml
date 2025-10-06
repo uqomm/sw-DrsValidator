@@ -1,0 +1,14 @@
+services:
+  drs-validation:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8080:8080"  # Application port
+      - "5678:5678"  # Debugger port
+    volumes:
+      - ./src:/app   # Mount src directory for live code changes
+    environment:
+      - PYTHONPATH=/app
+      - FLASK_ENV=development
+      - LOG_LEVEL=debug

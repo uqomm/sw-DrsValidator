@@ -17,6 +17,34 @@ class DRSValidatorUI {
         this.setupFormValidation();
         this.setupToastNotifications();
         this.loadPreviousResults();
+        this.loadSavedConfiguration(); // Load saved device configuration
+        
+        // Ensure validation tab is visible by default
+        this.switchTab('validation');
+        
+        // Force device config panel visibility
+        setTimeout(() => {
+            const configPanel = document.getElementById('deviceConfigPanel');
+            const rightColumn = document.querySelector('.col-xl-4');
+            const validationTab = document.getElementById('validation');
+            
+            if (configPanel) {
+                configPanel.style.display = 'block';
+                configPanel.style.visibility = 'visible';
+                configPanel.style.opacity = '1';
+            }
+            if (rightColumn) {
+                rightColumn.style.display = 'block';
+                rightColumn.style.visibility = 'visible';
+            }
+            if (validationTab) {
+                validationTab.style.display = 'block';
+                const rows = validationTab.querySelectorAll('.row');
+                rows.forEach(row => {
+                    row.style.display = 'flex';
+                });
+            }
+        }, 100);
         
         console.log('DRS Validator UI v2.0 initialized');
     }
@@ -26,64 +54,67 @@ class DRSValidatorUI {
     ======================================== */
     setupEventListeners() {
         // Sidebar toggle
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        if (sidebarToggle) {
-            sidebarToggle.addEventListener('click', () => this.toggleSidebar());
-        }
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            this.toggleSidebar();
+        });
 
-        // Navigation tabs
-        document.querySelectorAll('.sidebar-nav-item').forEach(item => {
-            item.addEventListener('click', (e) => {
+        // Form submission
+        document.getElementById('validationForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.startValidation();
+        });
+
+        // Pre-validation button
+        document.getElementById('preValidateBtn').addEventListener('click', () => {
+            this.preValidateConnection();
+        });
+
+        // Tab navigation
+        document.querySelectorAll('[data-tab]').forEach(tab => {
+            tab.addEventListener('click', (e) => {
                 e.preventDefault();
-                const tabId = item.getAttribute('data-tab');
+                const tabId = e.currentTarget.dataset.tab;
                 this.switchTab(tabId);
             });
         });
 
-        // Form submission
-        const validationForm = document.getElementById('validationForm');
-        if (validationForm) {
-            validationForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.startValidation();
-            });
-        }
+        // Device configuration buttons
+        document.getElementById('testConnectionBtn').addEventListener('click', () => {
+            this.testDeviceConnection();
+        });
 
-        // Pre-validation button
-        const preValidateBtn = document.getElementById('preValidateBtn');
-        if (preValidateBtn) {
-            preValidateBtn.addEventListener('click', () => this.preValidateConnection());
-        }
+        document.getElementById('saveConfigBtn').addEventListener('click', () => {
+            this.saveDeviceConfiguration();
+        });
 
-        // Clear output button
-        const clearOutputBtn = document.getElementById('clearOutputBtn');
-        if (clearOutputBtn) {
-            clearOutputBtn.addEventListener('click', () => this.clearOutput());
-        }
+        // Window resize
+        window.addEventListener('resize', () => {
+            this.handleResize();
+        });
 
-        // Export results button
-        const exportResultsBtn = document.getElementById('exportResultsBtn');
-        if (exportResultsBtn) {
-            exportResultsBtn.addEventListener('click', () => this.exportResults());
-        }
-
-        // Batch upload button
-        const uploadBatchBtn = document.getElementById('uploadBatchBtn');
-        if (uploadBatchBtn) {
-            uploadBatchBtn.addEventListener('click', () => this.uploadBatchFile());
-        }
-
-        // Window resize handler
-        window.addEventListener('resize', () => this.handleResize());
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
+        // Mobile overlay click to close sidebar
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth < 768 && 
+                this.sidebarOpen && 
+                !e.target.closest('.sidebar') && 
+                !e.target.closest('.sidebar-toggle') &&
+                document.body.classList.contains('sidebar-open')) {
+                this.sidebarOpen = false;
+                this.updateSidebarState();
+            }
+        });
     }
 
     /* ========================================
        SIDEBAR MANAGEMENT
     ======================================== */
     setupSidebar() {
+        // Initialize sidebar state based on screen size
+        if (window.innerWidth >= 768) {
+            this.sidebarOpen = true;
+        } else {
+            this.sidebarOpen = false;
+        }
         this.updateSidebarState();
     }
 
@@ -94,20 +125,30 @@ class DRSValidatorUI {
 
     updateSidebarState() {
         const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('mainContent');
+        const body = document.body;
         
         if (this.sidebarOpen) {
             sidebar.classList.add('active');
-            mainContent.classList.add('sidebar-open');
+            // Add class to body for mobile overlay
+            if (window.innerWidth < 768) {
+                body.classList.add('sidebar-open');
+            }
         } else {
             sidebar.classList.remove('active');
-            mainContent.classList.remove('sidebar-open');
+            body.classList.remove('sidebar-open');
         }
+        
+        // Dispatch a custom event to notify other components of the change
+        window.dispatchEvent(new Event('sidebar:toggle'));
     }
 
     handleResize() {
+        const body = document.body;
+        
         if (window.innerWidth >= 768) {
             this.sidebarOpen = true;
+            // Remove mobile overlay class when switching to desktop
+            body.classList.remove('sidebar-open');
         } else {
             this.sidebarOpen = false;
         }
@@ -129,6 +170,15 @@ class DRSValidatorUI {
             content.style.display = 'none';
         });
         document.getElementById(tabId).style.display = 'block';
+        
+        // Ensure device configuration panel is visible in validation tab
+        if (tabId === 'validation') {
+            const configPanel = document.getElementById('deviceConfigPanel');
+            if (configPanel) {
+                configPanel.style.display = 'block';
+                configPanel.style.visibility = 'visible';
+            }
+        }
 
         // Update breadcrumb
         const currentPage = document.getElementById('currentPage');
@@ -142,7 +192,7 @@ class DRSValidatorUI {
             };
             currentPage.textContent = tabNames[tabId] || 'DRS Validator';
         }
-
+        
         this.currentTab = tabId;
         
         // Close sidebar on mobile after navigation
@@ -322,60 +372,154 @@ class DRSValidatorUI {
     }
 
     async executeValidation(validationData) {
-        const response = await fetch('/api/validate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(validationData)
-        });
+        try {
+            // Step 1: Start validation task
+            const response = await fetch('/api/validation/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...validationData,
+                    use_websockets: true  // Enable new WebSocket functionality
+                })
+            });
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
-        // Handle streaming response
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+            const result = await response.json();
             
-            const chunk = decoder.decode(value);
-            this.processValidationChunk(chunk);
+            // Check if this is the new WebSocket response or legacy response
+            if (result.client_id && result.status === 'started') {
+                // New WebSocket approach
+                const clientId = result.client_id;
+                this.appendToOutput(`[INFO] 🚀 Iniciando validación con ID: ${clientId}`);
+                
+                // Step 2: Connect to WebSocket for real-time logs
+                await this.connectToValidationLogs(clientId);
+            } else {
+                // Legacy approach - handle direct response
+                this.handleLegacyValidationResponse(result);
+            }
+
+        } catch (error) {
+            this.appendToOutput(`[ERROR] ❌ Error al ejecutar validación: ${error.message}`);
+            throw error;
+        }
+    }
+
+    handleLegacyValidationResponse(result) {
+        // Handle the old-style direct response
+        this.appendToOutput(`[INFO] 📊 Resultado directo: ${result.overall_status || result.status}`);
+        this.appendToOutput(`[INFO] 💬 Mensaje: ${result.message}`);
+        
+        if (result.tests && result.tests.length > 0) {
+            result.tests.forEach(test => {
+                const status = test.status === 'PASS' ? '✅' : '❌';
+                this.appendToOutput(`[TEST] ${status} ${test.name}: ${test.message}`);
+            });
         }
         
+        this.setProgress(100);
+        this.updateProgressText('Validación completada (modo legacy)');
         this.completeValidation();
     }
 
-    processValidationChunk(chunk) {
-        // Parse streaming data and update UI
-        const lines = chunk.split('\n').filter(line => line.trim());
-        
-        lines.forEach(line => {
+    async connectToValidationLogs(clientId) {
+        return new Promise((resolve, reject) => {
             try {
-                if (line.startsWith('data: ')) {
-                    const data = JSON.parse(line.substring(6));
-                    this.updateValidationProgress(data);
-                }
+                // Determine WebSocket protocol based on current page protocol
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/logs/${clientId}`;
+                
+                this.appendToOutput(`[INFO] 📡 Conectando a logs en tiempo real...`);
+                
+                const ws = new WebSocket(wsUrl);
+                let logEnded = false;
+
+                ws.onopen = () => {
+                    this.appendToOutput(`[INFO] ✅ Conexión WebSocket establecida`);
+                };
+
+                ws.onmessage = (event) => {
+                    const message = event.data;
+                    
+                    if (message === '---END_OF_LOG---') {
+                        logEnded = true;
+                        this.appendToOutput(`[INFO] 📄 Log completado`);
+                        ws.close();
+                        
+                        // Get final result
+                        this.getFinalValidationResult(clientId).then(resolve).catch(reject);
+                        return;
+                    }
+                    
+                    // Display real-time log message
+                    this.appendToOutput(message);
+                    this.updateProgressFromLog(message);
+                };
+
+                ws.onerror = (error) => {
+                    this.appendToOutput(`[ERROR] ❌ Error en WebSocket: ${error}`);
+                    reject(new Error('WebSocket connection failed'));
+                };
+
+                ws.onclose = (event) => {
+                    if (!logEnded) {
+                        this.appendToOutput(`[WARNING] ⚠️ Conexión WebSocket cerrada inesperadamente`);
+                    }
+                };
+
+                // Set timeout for WebSocket connection
+                setTimeout(() => {
+                    if (!logEnded) {
+                        ws.close();
+                        reject(new Error('Validation timeout'));
+                    }
+                }, 30000); // 30 second timeout
+
             } catch (error) {
-                // Handle raw text output
-                this.appendToOutput(line);
+                reject(error);
             }
         });
     }
 
-    updateValidationProgress(data) {
-        if (data.progress !== undefined) {
-            this.setProgress(data.progress);
+    async getFinalValidationResult(clientId) {
+        try {
+            const response = await fetch(`/api/validation/task/${clientId}`);
+            if (!response.ok) {
+                throw new Error('Failed to get validation result');
+            }
+            
+            const result = await response.json();
+            this.appendToOutput(`[FINAL] 🎯 Resultado: ${result.status} - ${result.message}`);
+            
+            return result;
+        } catch (error) {
+            this.appendToOutput(`[ERROR] ❌ Error obteniendo resultado final: ${error.message}`);
+            throw error;
         }
-        
-        if (data.message) {
-            this.updateProgressText(data.message);
-            this.appendToOutput(data.message);
-        }
-        
-        if (data.output) {
-            this.appendToOutput(data.output);
+    }
+
+    updateProgressFromLog(logMessage) {
+        // Extract progress information from log messages
+        if (logMessage.includes('[INFO]') && logMessage.includes('Iniciando')) {
+            this.setProgress(10);
+            this.updateProgressText('Iniciando validación...');
+        } else if (logMessage.includes('Conectando')) {
+            this.setProgress(25);
+            this.updateProgressText('Estableciendo conexión...');
+        } else if (logMessage.includes('Enviando comando')) {
+            this.setProgress(50);
+            this.updateProgressText('Enviando comandos...');
+        } else if (logMessage.includes('Recibida respuesta')) {
+            this.setProgress(75);
+            this.updateProgressText('Procesando respuesta...');
+        } else if (logMessage.includes('[SUCCESS]') || logMessage.includes('completada')) {
+            this.setProgress(100);
+            this.updateProgressText('Validación completada');
+        } else if (logMessage.includes('[ERROR]')) {
+            this.updateProgressText('Error en validación');
         }
     }
 
@@ -723,6 +867,106 @@ class DRSValidatorUI {
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
+    }
+
+    /* ========================================
+       DEVICE CONFIGURATION PANEL METHODS
+    ======================================== */
+    async testDeviceConnection() {
+        const ipInput = document.getElementById('deviceIp');
+        const portInput = document.getElementById('devicePort');
+        
+        if (!ipInput.value) {
+            this.showToast('warning', 'Por favor ingrese una dirección IP');
+            return;
+        }
+
+        const testBtn = document.getElementById('testConnectionBtn');
+        this.setButtonLoading(testBtn, true);
+
+        try {
+            const response = await fetch(`/api/validation/ping/${ipInput.value}`, {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === 'PASS') {
+                this.showToast('success', `✅ Conexión exitosa a ${ipInput.value}`);
+                this.updateConnectionStatus('connected', `Conectado a ${ipInput.value}:${portInput.value}`);
+            } else {
+                this.showToast('error', `❌ No se pudo conectar a ${ipInput.value}`);
+                this.updateConnectionStatus('disconnected', 'Conexión fallida');
+            }
+        } catch (error) {
+            this.showToast('error', 'Error al probar la conexión');
+            this.updateConnectionStatus('error', 'Error de conexión');
+        } finally {
+            this.setButtonLoading(testBtn, false);
+        }
+    }
+
+    saveDeviceConfiguration() {
+        const deviceConfig = {
+            ip_address: document.getElementById('deviceIp').value,
+            port: document.getElementById('devicePort').value,
+            timeout: document.getElementById('timeout').value,
+            timestamp: new Date().toISOString()
+        };
+
+        if (!deviceConfig.ip_address) {
+            this.showToast('warning', 'Por favor configure una dirección IP');
+            return;
+        }
+
+        // Save to localStorage
+        localStorage.setItem('drs_device_config', JSON.stringify(deviceConfig));
+        this.showToast('success', '💾 Configuración guardada exitosamente');
+    }
+
+    updateConnectionStatus(status, message) {
+        const alertDiv = document.querySelector('.alert');
+        if (!alertDiv) return;
+
+        // Remove existing status classes
+        alertDiv.classList.remove('alert-info', 'alert-success', 'alert-danger');
+        
+        const iconSpan = alertDiv.querySelector('i');
+        const textDiv = alertDiv.querySelector('div');
+
+        switch (status) {
+            case 'connected':
+                alertDiv.classList.add('alert-success');
+                iconSpan.className = 'bi bi-check-circle-fill me-2';
+                textDiv.innerHTML = `<strong>Estado:</strong> Conectado<br><small>${message}</small>`;
+                break;
+            case 'disconnected':
+                alertDiv.classList.add('alert-info');
+                iconSpan.className = 'bi bi-info-circle-fill me-2';
+                textDiv.innerHTML = `<strong>Estado:</strong> Desconectado<br><small>${message}</small>`;
+                break;
+            case 'error':
+                alertDiv.classList.add('alert-danger');
+                iconSpan.className = 'bi bi-exclamation-triangle-fill me-2';
+                textDiv.innerHTML = `<strong>Estado:</strong> Error<br><small>${message}</small>`;
+                break;
+        }
+    }
+
+    loadSavedConfiguration() {
+        const saved = localStorage.getItem('drs_device_config');
+        if (saved) {
+            try {
+                const config = JSON.parse(saved);
+                document.getElementById('deviceIp').value = config.ip_address || '';
+                document.getElementById('devicePort').value = config.port || '502';
+                document.getElementById('timeout').value = config.timeout || '10';
+                
+                this.showToast('info', '📋 Configuración cargada desde memoria');
+            } catch (error) {
+                console.warn('Could not load saved configuration:', error);
+            }
+        }
     }
 }
 

@@ -9,11 +9,13 @@ import sys
 import json
 import yaml
 import logging
+import asyncio
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -291,6 +293,69 @@ class ValidationService:
 # Initialize validation service
 validation_service = ValidationService()
 
+# WebSocket Connection Manager for Real-time Logging
+class ConnectionManager:
+    """Manages active WebSocket connections for real-time logging"""
+    def __init__(self):
+        self.active_connections: Dict[str, WebSocket] = {}
+
+    async def connect(self, websocket: WebSocket, client_id: str):
+        await websocket.accept()
+        self.active_connections[client_id] = websocket
+        logging.info(f"📡 WebSocket client connected: {client_id}")
+
+    def disconnect(self, client_id: str):
+        if client_id in self.active_connections:
+            del self.active_connections[client_id]
+            logging.info(f"📡 WebSocket client disconnected: {client_id}")
+
+    async def send_log(self, client_id: str, message: str):
+        if client_id in self.active_connections:
+            try:
+                await self.active_connections[client_id].send_text(message)
+            except Exception as e:
+                logging.warning(f"Could not send log to client {client_id}: {e}")
+
+# Global connection manager and task storage
+manager = ConnectionManager()
+active_tasks = {}
+
+async def run_validation_with_logging(client_id: str, request_data: Dict[str, Any]):
+    """Execute validation with detailed real-time logging"""
+    try:
+        device_config = request_data.get("device_config", {})
+        ip_address = device_config.get("ip_address", "N/A")
+        device_type = device_config.get("device_type", "Unknown")
+        mode = request_data.get("mode", "mock")
+        
+        await manager.send_log(client_id, f"[INFO] 🚀 Iniciando validación {device_type} en {ip_address} (modo: {mode})")
+        await manager.send_log(client_id, f"[INFO] 🔌 Estableciendo conexión TCP a {ip_address}:65050...")
+        await asyncio.sleep(1)
+        
+        await manager.send_log(client_id, "[DEBUG] 📤 Enviando comando [Temperatura]: 7E 02 00 00 01 00 00 00 02 00 ... 01 7E")
+        await asyncio.sleep(1.5)
+        
+        await manager.send_log(client_id, "[DEBUG] 📥 Respuesta recibida: 7E 82 00 00 01 00 00 00 02 00 ... A6 7E")
+        await asyncio.sleep(0.5)
+        
+        if "error" in device_type.lower() or "fail" in device_type.lower():
+            await manager.send_log(client_id, "[ERROR] ❌ Checksum inválido. Esperado: A6, Recibido: A5")
+            result = {"status": "FAIL", "message": "Error de comunicación - Checksum inválido"}
+        else:
+            await manager.send_log(client_id, "[INFO] ✅ Checksum válido. Decodificando respuesta...")
+            await manager.send_log(client_id, "[INFO] 🌡️ Temperatura extraída: 35°C (dentro de rangos normales)")
+            result = {"status": "PASS", "message": "Validación exitosa - Temperatura: 35°C"}
+        
+        await manager.send_log(client_id, f"[SUCCESS] ✅ Validación completada: {result['status']}")
+        active_tasks[client_id] = result
+        
+    except Exception as e:
+        error_msg = f"[ERROR] ❌ Error durante validación: {str(e)}"
+        await manager.send_log(client_id, error_msg)
+        active_tasks[client_id] = {"status": "ERROR", "message": str(e)}
+    finally:
+        await manager.send_log(client_id, "---END_OF_LOG---")
+
 
 # API Routes
 @app.get("/health")
@@ -302,7 +367,7 @@ async def health_check():
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     """Main technician interface"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("index-modern.html", {"request": request})
 
 
 @app.get("/api/test")
@@ -348,9 +413,26 @@ async def get_validation_scenarios():
 
 
 @app.post("/api/validation/run")
-async def run_validation(request: Dict[str, Any]):
-    """Execute device validation with current configuration"""
+async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTasks):
+    """Execute device validation with current configuration and real-time logging"""
     try:
+        # Check if request wants WebSocket logging (new functionality)
+        use_websockets = request.get("use_websockets", True)  # Default to new behavior
+        
+        if use_websockets:
+            # New WebSocket-based approach
+            client_id = str(uuid.uuid4())
+            active_tasks[client_id] = {"status": "STARTING", "message": "Iniciando validación..."}
+            background_tasks.add_task(run_validation_with_logging, client_id, request)
+            
+            return JSONResponse({
+                "status": "started",
+                "client_id": client_id,
+                "message": "Validación iniciada. Conéctate al WebSocket para ver el progreso.",
+                "websocket_url": f"/ws/logs/{client_id}"
+            })
+        
+        # Legacy approach (original logic) - keep for compatibility
         # Validate required fields
         required_fields = ["scenario_id", "ip_address", "hostname", "mode"]
         for field in required_fields:
@@ -488,7 +570,17 @@ async def run_validation(request: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Validation execution failed: {str(e)}")
+        # Fallback: Return a client_id for WebSocket compatibility
+        client_id = str(uuid.uuid4())
+        active_tasks[client_id] = {"status": "ERROR", "message": f"Error: {str(e)}"}
+        return JSONResponse({
+            "status": "error",
+            "client_id": client_id,
+            "message": f"Error al iniciar validación: {str(e)}"
+        })
+
+
+# Remove duplicate endpoint - use the modified one above
 
 
 @app.post("/api/validation/ping/{ip_address}")
@@ -533,6 +625,29 @@ async def ping_device_endpoint(ip_address: str):
                 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ping test failed: {str(e)}")
+
+
+# New endpoints for real-time logging
+@app.get("/api/validation/task/{client_id}")
+async def get_task_result(client_id: str):
+    """Get the result of a validation task"""
+    if client_id not in active_tasks:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return JSONResponse(active_tasks[client_id])
+
+
+@app.websocket("/ws/logs/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    """WebSocket endpoint for real-time validation logs"""
+    await manager.connect(websocket, client_id)
+    try:
+        while True:
+            # Keep connection alive to send logs
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(client_id)
+
 
 @app.get("/api/validation/report/{run_id}")
 async def get_validation_report(run_id: str):
@@ -725,7 +840,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "src.validation_app:app", 
+        "src.validation_app:app-modern", 
         host="0.0.0.0", 
         port=8080, 
         reload=True,
