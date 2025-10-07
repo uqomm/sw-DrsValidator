@@ -49,10 +49,10 @@
       include_tasks: tasks/monitoring-setup.yml
       tags: [monitoring, backup]
 
-    # Phase 5: Security Configuration
-    - name: "Phase 5: Security Setup"
-      include_tasks: tasks/security-setup.yml
-      tags: [security]
+    # Phase 5: Security Configuration - DISABLED to preserve SSH access
+    # - name: "Phase 5: Security Setup"
+    #   include_tasks: tasks/security-setup.yml
+    #   tags: [security]
 
   post_tasks:
     - name: Verify deployment success
