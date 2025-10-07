@@ -1,38 +1,38 @@
-# Preguntas Técnicas: Conectividad Tarjetas Digitales VHF, P25 y LC500
+# Technical Questions: Digital Cards Connectivity VHF, P25 and LC500
 
-## Contexto del Sistema
+## System Context
 
-### Arquitectura
+### Architecture
 ```mermaid
 flowchart TD
-    A["Software de Validación<br/>(Nuestro)"] 
-    
-    subgraph "Sistemas Independientes por Banda"
+    A["Validation Software<br/>(Ours)"]
+
+    subgraph "Independent Systems per Band"
         B1["Master Digital Board<br/>(VHF)"]
         B2["Master Digital Board<br/>(P25)"]
         B3["Master Digital Board<br/>(LC500)"]
-        
-        C1["Remoto Digital Board<br/>(VHF)"]
-        C2["Remoto Digital Board<br/>(P25)"]
-        C3["Remoto Digital Board<br/>(LC500)"]
-        
+
+        C1["Remote Digital Board<br/>(VHF)"]
+        C2["Remote Digital Board<br/>(P25)"]
+        C3["Remote Digital Board<br/>(LC500)"]
+
         D1["LNA / PA<br/>(VHF)"]
         D2["LNA / PA<br/>(P25)"]
         D3["LNA / PA<br/>(LC500)"]
     end
-    
-    A -.->|"TCP/IP Puerto 65050"| B1
-    A -.->|"TCP/IP Puerto 65050"| B2
-    A -.->|"TCP/IP Puerto 65050"| B3
-    
-    B1 -.->|"Fibra Óptica"| C1
-    B2 -.->|"Fibra Óptica"| C2
-    B3 -.->|"Fibra Óptica"| C3
-    
+
+    A -.->|"TCP/IP Port 65050"| B1
+    A -.->|"TCP/IP Port 65050"| B2
+    A -.->|"TCP/IP Port 65050"| B3
+
+    B1 -.->|"Optical Fiber"| C1
+    B2 -.->|"Optical Fiber"| C2
+    B3 -.->|"Optical Fiber"| C3
+
     C1 -.->|"DB9↔IDC-10pin JP1"| D1
     C2 -.->|"DB9↔IDC-10pin JP1"| D2
     C3 -.->|"DB9↔IDC-10pin JP1"| D3
-    
+
     style A fill:#e1f5fe,color:#000
     style B1 fill:#e8f5e8,color:#000
     style B2 fill:#e8f5e8,color:#000
@@ -43,7 +43,7 @@ flowchart TD
     style D1 fill:#fff3e0,color:#000
     style D2 fill:#fff3e0,color:#000
     style D3 fill:#ffebee,color:#000
-    
+
     classDef working stroke:#4caf50,stroke-width:2px,color:#000
     classDef problem stroke:#f44336,stroke-width:3px,stroke-dasharray: 5 5,color:#000
     class B1,C1 working
@@ -51,112 +51,112 @@ flowchart TD
     class B3,C3,D3 problem
 ```
 
-**NOTA**: Cada banda (VHF, P25, LC500) tiene su propio Master Digital Board y funciona como sistema independiente
+**NOTE**: Each band (VHF, P25, LC500) has its own Master Digital Board and operates as an independent system
 
-### Versiones de Software
-- **VHF**: 231016-BB1-145-15M-16C-OP8 ✅ Compatible TCP
-- **P25**: 231115-BB1-806D851M-18M-16C-OP8 ✅ Compatible TCP  
-- **LC500**: FPGA:250529-16A, Software:250530-05, Kernel:210909 ❌ No compatible TCP
+### Software Versions
+- **VHF**: 231016-BB1-145-15M-16C-OP8 ✅ TCP Compatible
+- **P25**: 231115-BB1-806D851M-18M-16C-OP8 ✅ TCP Compatible
+- **LC500**: FPGA:250529-16A, Software:250530-05, Kernel:210909 ❌ TCP Not Compatible
 
-### Componentes LNA/PA
-- **Conexión**: Puerto JP1 pines 5,7 via cable DB9↔IDC-10pin
-- **Problema**: Software nativo del remoto NO lee parámetros LNA/PA
-- **Objetivo**: Monitoreo integrado via TCP/IP
+### LNA/PA Components
+- **Connection**: JP1 port pins 5,7 via DB9↔IDC-10pin cable
+- **Problem**: Remote native software does NOT read LNA/PA parameters
+- **Objective**: Integrated monitoring via TCP/IP
 
 ---
 
-## Preguntas Técnicas
+## Technical Questions
 
-### 1. Monitoreo LNA/PA
+### 1. LNA/PA Monitoring
 
-**Arquitectura del Problema:**
+**Problem Architecture:**
 ```mermaid
 flowchart TD
-    A["Software de Validación<br/>(Nuestro)"] 
+    A["Validation Software<br/>(Ours)"]
     B["Master Digital Board<br/>(VHF/P25)"]
-    C["Remoto Digital Board<br/>(VHF/P25)"]
+    C["Remote Digital Board<br/>(VHF/P25)"]
     D["LNA / PA"]
-    
-    A -.->|"TCP/IP<br/>Puerto 65050"| B
-    B -.->|"Fibra Óptica"| C
-    C -.->|"Cable DB9↔IDC-10pin<br/>Puerto JP1 (pines 5,7)"| D
-    
+
+    A -.->|"TCP/IP<br/>Port 65050"| B
+    B -.->|"Optical Fiber"| C
+    C -.->|"DB9↔IDC-10pin Cable<br/>JP1 Port (pins 5,7)"| D
+
     style A fill:#e1f5fe,color:#000
     style B fill:#f3e5f5,color:#000
     style C fill:#fff3e0,color:#000
     style D fill:#ffebee,color:#000
-    
+
     classDef problem stroke:#f44336,stroke-width:3px,stroke-dasharray: 5 5,color:#000
     class D problem
 ```
 
-**PROBLEMA**: Software nativo del remoto NO lee parámetros LNA/PA  
-**OBJETIVO**: Monitoreo integrado via TCP/IP
+**PROBLEM**: Remote native software does NOT read LNA/PA parameters
+**OBJECTIVE**: Integrated monitoring via TCP/IP
 
-**Preguntas:**
-- ¿Existen comandos específicos en "Protocol _TT_2023_8_30.pdf" para LNA y PA?
-- ¿Se puede usar puerto 65050 para monitorear LNA/PA?
-- ¿Por qué el software nativo del remoto no lee parámetros LNA via DB9-IDC 10pin?
-- ¿Es posible transportar comandos LNA/PA a través de: Master → Fibra → Remoto → TCP/IP?
-- ¿Se requiere configuración especial en master/remoto para habilitar comunicación LNA/PA?
-- ¿Los archivos .rar VHF/P25 incluyen comandos de monitoreo para LNA/PA?
+**Questions:**
+- Are there specific commands in "Protocol _TT_2023_8_30.pdf" for LNA and PA?
+- Can port 65050 be used to monitor LNA/PA?
+- Why doesn't the remote native software read LNA parameters via DB9-IDC 10pin?
+- Is it possible to transport LNA/PA commands through: Master → Fiber → Remote → TCP/IP?
+- Is special configuration required in master/remote to enable LNA/PA communication?
+- Do the VHF/P25 .rar files include monitoring commands for LNA/PA?
 
-### 2. Compatibilidad LC500
+### 2. LC500 Compatibility
 
-**Arquitectura del Problema:**
+**Problem Architecture:**
 ```mermaid
 flowchart TD
-    A["Software de Validación<br/>(Nuestro)"] 
+    A["Validation Software<br/>(Ours)"]
     B["Master Digital Board<br/>(LC500)"]
-    C["Remoto Digital Board<br/>(LC500)"]
-    
-    A -.->|"TCP/IP Puerto 65050<br/>❌ No Compatible"| B
-    B -.->|"Fibra Óptica"| C
-    
+    C["Remote Digital Board<br/>(LC500)"]
+
+    A -.->|"TCP/IP Port 65050<br/>❌ Not Compatible"| B
+    B -.->|"Optical Fiber"| C
+
     style A fill:#e1f5fe,color:#000
     style B fill:#ffebee,color:#000
     style C fill:#ffebee,color:#000
-    
+
     classDef incompatible stroke:#f44336,stroke-width:3px,stroke-dasharray: 5 5,color:#000
     class B,C incompatible
 ```
 
-**PROBLEMA**: LC500 no soporta protocolo TCP Puerto 65050  
-**OBJETIVO**: Hacer LC500 compatible con sistema de monitoreo
+**PROBLEM**: LC500 does not support TCP protocol Port 65050
+**OBJECTIVE**: Make LC500 compatible with monitoring system
 
-**Preguntas:**
-- ¿LC500 soporta los mismos comandos TCP que VHF/P25 via fibra óptica?
-- ¿Es compatible con puerto 65050 en master digital board?
-- ¿Qué modificaciones requiere LC500 para compatibilidad TCP?
-- ¿Hay que actualizar LC500 a versiones compatibles con VHF/P25?
+**Questions:**
+- Does LC500 support the same TCP commands as VHF/P25 via optical fiber?
+- Is it compatible with port 65050 in master digital board?
+- What modifications does LC500 require for TCP compatibility?
+- Does LC500 need to be updated to versions compatible with VHF/P25?
 
-### 3. Estandarización
+### 3. Standardization
 
-**Arquitectura de Versiones:**
+**Versions Architecture:**
 ```mermaid
 flowchart TD
-    A["Software de Validación<br/>(Sistema Unificado)"]
-    
-    subgraph "Versiones Actuales"
-        V1["VHF<br/>231016-BB1-145-15M-16C-OP8<br/>✅ Funciona"]
-        V2["P25<br/>231115-BB1-806D851M-18M-16C-OP8<br/>✅ Funciona"]
-        V3["LC500<br/>FPGA: 250529-16A<br/>Software: 250530-05<br/>Kernel: 210909<br/>❌ No Compatible"]
+    A["Validation Software<br/>(Unified System)"]
+
+    subgraph "Current Versions"
+        V1["VHF<br/>231016-BB1-145-15M-16C-OP8<br/>✅ Working"]
+        V2["P25<br/>231115-BB1-806D851M-18M-16C-OP8<br/>✅ Working"]
+        V3["LC500<br/>FPGA: 250529-16A<br/>Software: 250530-05<br/>Kernel: 210909<br/>❌ Not Compatible"]
     end
-    
-    subgraph "Objetivo: Versiones Unificadas"
-        U1["VHF Estandarizado<br/>Versión Compatible"]
-        U2["P25 Estandarizado<br/>Versión Compatible"]
-        U3["LC500 Actualizado<br/>Versión Compatible"]
+
+    subgraph "Objective: Unified Versions"
+        U1["VHF Standardized<br/>Compatible Version"]
+        U2["P25 Standardized<br/>Compatible Version"]
+        U3["LC500 Updated<br/>Compatible Version"]
     end
-    
+
     A -.-> V1
     A -.-> V2
     A -.-> V3
-    
+
     V1 --> U1
     V2 --> U2
     V3 --> U3
-    
+
     style A fill:#e1f5fe,color:#000
     style V1 fill:#e8f5e8,color:#000
     style V2 fill:#e8f5e8,color:#000
@@ -164,7 +164,7 @@ flowchart TD
     style U1 fill:#f0f4c3,color:#000
     style U2 fill:#f0f4c3,color:#000
     style U3 fill:#f0f4c3,color:#000
-    
+
     classDef working stroke:#4caf50,stroke-width:2px,color:#000
     classDef broken stroke:#f44336,stroke-width:2px,color:#000
     classDef target stroke:#ff9800,stroke-width:2px,stroke-dasharray: 3 3,color:#000
@@ -173,15 +173,15 @@ flowchart TD
     class U1,U2,U3 target
 ```
 
-**PROBLEMA**: Diferentes versiones complican mantenimiento y compatibilidad  
-**OBJETIVO**: Estandarizar versiones para monitoreo unificado
+**PROBLEM**: Different versions complicate maintenance and compatibility
+**OBJECTIVE**: Standardize versions for unified monitoring
 
-**Preguntas:**
-- ¿Es posible usar las mismas versiones VHF/P25 en todas las tarjetas?
-- ¿Mejoraría esto la compatibilidad del monitoreo TCP?
-- ¿Hay implicaciones técnicas en estandarizar versiones?
+**Questions:**
+- Is it possible to use the same VHF/P25 versions on all cards?
+- Would this improve TCP monitoring compatibility?
+- Are there technical implications in standardizing versions?
 
-## Comandos de Monitoreo Requeridos (13 comandos TCP)
+## Required Monitoring Commands (13 TCP commands)
 - `temperature` (0x02), `device_id` (0x97), `datt` (0x09)
 - `input_and_output_power` (0xF3), `channel_switch` (0x42)
 - `channel_frequency_configuration` (0x36), `central_frequency_point` (0xEB)
@@ -189,12 +189,12 @@ flowchart TD
 - `optical_port_switch` (0x91), `optical_port_status` (0x9A)
 - `optical_port_devices_connected_1` (0xF8), `optical_port_devices_connected_2` (0xF9)
 
-## Archivos de Referencia
-- `Protocol _TT_2023_8_30.pdf` ✅ Protocolo principal (funciona)
-- `Santone module monitor protocol_2023_8_15.pdf` ❌ No funciona
+## Reference Files
+- `Protocol _TT_2023_8_30.pdf` ✅ Main protocol (works)
+- `Santone module monitor protocol_2023_8_15.pdf` ❌ Doesn't work
 - `VHF - 231016-BB1-145-15M-16C-OP8.rar`, `P25 - 231115-BB1-806D851M-18M-16C-OP8.rar`
 - `LNA_VHF_Technical Specification (1).pdf`
 
 ---
-*Versión: 2.2 - Diagramas Mermaid por pregunta*</content>
+*Version: 2.2 - Mermaid diagrams per question*</content>
 <parameter name="filePath">/home/arturo/sw-drsmonitoring/validation-framework/docs/preguntas_conectividad_tarjetas_digitales.md
