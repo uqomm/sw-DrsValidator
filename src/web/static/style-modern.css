@@ -1,63 +1,51 @@
 /* DRS Validator - Modern CSS Framework */
-/* Bootstrap 5 Integration + Custom Design System */
+/* Bootstrap 5 Integration + Icinga Theme Design System */
 /* Version: 2.0 - October 2025 */
 
+@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import url('https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css');
 
 /* ========================================
-   DESIGN TOKENS - Color System
+   DESIGN TOKENS - Color System (Icinga Theme)
 ======================================== */
 :root {
-  /* Primary Colors - Professional Blue */
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-200: #bfdbfe;
-  --color-primary-300: #93c5fd;
-  --color-primary-400: #60a5fa;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
- /* Utility Classes */
-.d-none { display: none !important; }
-.d-block { display: block !important; }
+  /* Icinga Color Scheme - Base Colors */
+  --icinga-blue: rgb(16, 38, 59);
+  --icinga-secondary: rgb(255, 80, 0);
+  --icinga-blue-rgb: 16, 38, 59;
+  --icinga-secondary-rgb: 255, 80, 0;
+  --icinga-menu: rgb(87, 87, 86);
 
-/* Tab Content Visibility */
-.tab-content {
-  display: none !important;
-}
+  /* Primary Colors - Icinga Blue Palette */
+  --color-primary-50: #e8ecf0;
+  --color-primary-100: #c4ced8;
+  --color-primary-200: #9caebe;
+  --color-primary-300: #748ea4;
+  --color-primary-400: #567591;
+  --color-primary-500: #385d7d;
+  --color-primary-600: #325575;
+  --color-primary-700: #2b4a6a;
+  --color-primary-800: #243f60;
+  --color-primary-900: #10263b; /* Icinga Blue */
 
-.tab-content.active {
-  display: block !important;
-}
-
-@media (max-width: 767px) {
-  .d-md-none { display: none !important; }
-}
-
-@media (min-width: 768px) {
-  .d-md-block { display: block !important; }
-  .d-md-flex { display: flex !important; }
-}mary-800: #1e40af;
-  --color-primary-900: #1e3a8a;
-
-  /* Secondary Colors - Modern Gray */
-  --color-secondary-50: #f8fafc;
-  --color-secondary-100: #f1f5f9;
-  --color-secondary-200: #e2e8f0;
-  --color-secondary-300: #cbd5e1;
-  --color-secondary-400: #94a3b8;
-  --color-secondary-500: #64748b;
-  --color-secondary-600: #475569;
-  --color-secondary-700: #334155;
-  --color-secondary-800: #1e293b;
-  --color-secondary-900: #0f172a;
+  /* Secondary Colors - Icinga Orange */
+  --color-secondary-50: #fff4ed;
+  --color-secondary-100: #ffe3d1;
+  --color-secondary-200: #ffc4a3;
+  --color-secondary-300: #ff9e6a;
+  --color-secondary-400: #ff6c2f;
+  --color-secondary-500: #ff5000; /* Icinga Orange */
+  --color-secondary-600: #f04400;
+  --color-secondary-700: #c73600;
+  --color-secondary-800: #9e2b00;
+  --color-secondary-900: #7a2100;
 
   /* Semantic Colors */
-  --color-success: #16a34a;
-  --color-warning: #d97706;
-  --color-error: #dc2626;
-  --color-info: #2563eb;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #10263b;
 
   /* Background & Surface */
   --color-bg-primary: #ffffff;
@@ -65,20 +53,23 @@
   --color-bg-tertiary: #f1f5f9;
   --color-surface-primary: #ffffff;
   --color-surface-secondary: #f8fafc;
+  --color-menu-background: rgb(87, 87, 86);
 
-  /* Text Colors */
-  --color-text-primary: #0f172a;
+  /* Text Colors - Icinga Style */
+  --color-text-primary: rgb(16, 38, 59); /* Icinga Blue */
   --color-text-secondary: #475569;
   --color-text-tertiary: #64748b;
   --color-text-disabled: #94a3b8;
+  --color-text-on-primary: #ffffff;
+  --color-text-on-secondary: #ffffff;
 
   /* Border & Shadow */
   --color-border-primary: #e2e8f0;
   --color-border-secondary: #cbd5e1;
   --color-border-focus: #3b82f6;
 
-  /* Typography */
-  --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Typography - Icinga Style */
+  --font-family-primary: 'Century Gothic', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -127,7 +118,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Century Gothic', 'Inter', sans-serif;
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   display: flex;
@@ -196,8 +187,9 @@ body {
 .sidebar-brand {
   font-size: var(--font-size-xl);
   font-weight: 700;
-  color: var(--color-primary-600);
+  color: var(--icinga-blue);
   text-decoration: none;
+  font-family: 'Century Gothic', sans-serif;
 }
 
 .sidebar-nav {
@@ -208,26 +200,33 @@ body {
   display: flex;
   align-items: center;
   padding: var(--spacing-3) var(--spacing-6);
-  color: var(--color-text-secondary);
+  color: var(--icinga-blue);
   text-decoration: none;
   transition: all var(--transition-fast);
   border-left: 3px solid transparent;
+  font-family: 'Century Gothic', 'Inter', sans-serif;
+  font-size: 1.05rem; /* Texto un poco más grande */
+}
+
+.sidebar-nav-icon {
+  margin-right: 0.75rem; /* Espaciado entre ícono y texto */
+  font-size: 1.2rem; /* Ícono un poco más grande */
 }
 
 .sidebar-nav-item:hover {
   background-color: var(--color-bg-tertiary);
-  color: var(--color-primary-600);
-  border-left-color: var(--color-primary-600);
+  color: var(--icinga-secondary);
+  border-left-color: var(--icinga-secondary);
 }
 
 .sidebar-nav-item.active {
-    background-color: var(--color-bg-tertiary);
-    color: var(--color-primary);
+    background-color: var(--icinga-blue);
+    color: white;
     font-weight: 600;
 }
 
 .sidebar-nav-item.active .sidebar-nav-icon {
-    color: var(--color-primary);
+    color: white;
 }
 
 /* Main Content Area */
@@ -267,18 +266,9 @@ body {
 }
 
 /* Top Navigation Bar */
+/* Topbar - Hidden */
 .topbar {
-  background: var(--color-surface-primary);
-  border-bottom: 1px solid var(--color-border-primary);
-  box-shadow: var(--shadow-sm);
-  padding: var(--spacing-4) var(--spacing-6);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 999;
-  margin: 0; /* Remove any margins */
+  display: none; /* Ocultamos la barra superior */
 }
 
 .topbar-left {
@@ -496,23 +486,24 @@ body {
 }
 
 .btn-primary {
-  background-color: var(--color-primary-600);
+  background-color: var(--icinga-blue);
   color: white;
 }
 
 .btn-primary:hover {
-  background-color: var(--color-primary-700);
+  background-color: var(--color-primary-800);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 
 .btn-secondary {
-  background-color: var(--color-secondary-100);
-  color: var(--color-secondary-900);
+  background-color: var(--icinga-secondary);
+  color: white;
 }
 
 .btn-secondary:hover {
-  background-color: var(--color-secondary-200);
+  background-color: var(--color-secondary-600);
+  transform: translateY(-1px);
 }
 
 .btn-success {

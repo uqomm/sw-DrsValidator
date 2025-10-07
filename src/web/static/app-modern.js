@@ -188,16 +188,6 @@ class DRSValidatorUI {
                 configPanel.style.visibility = 'visible';
             }
         }
-
-        // Update breadcrumb
-        const currentPage = document.getElementById('currentPage');
-        if (currentPage) {
-            const tabNames = {
-                'validation': 'Validación',
-                'results': 'Resultados'
-            };
-            currentPage.textContent = tabNames[tabId] || 'DRS Validator';
-        }
         
         this.currentTab = tabId;
         
