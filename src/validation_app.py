@@ -89,83 +89,68 @@ def simple_validation(device_ip: str, device_type: str, hostname: str = None, li
     return results
 
 async def generate_simulated_validation_results(request: Dict[str, Any]):
-    """Generate realistic simulated validation results for development"""
-    import random
+    """
+    Generate realistic simulated validation results using BatchCommandsValidator.
+    Uses real DRS command frames and mock responses from captured data.
+    """
     import asyncio
     
-    scenario_id = request.get("scenario_id", "dru_remote_check")
-    ip_address = request.get("ip_address", "192.168.11.22")
+    scenario_id = request.get("scenario_id", "remote_test")
+    device_config = request.get("device_config", {})
+    ip_address = device_config.get("ip_address", "192.168.11.22")
+    device_type = device_config.get("device_type", "remote")
     
-    # Simulate processing time
-    await asyncio.sleep(random.uniform(2, 5))
+    # Simular procesamiento breve
+    await asyncio.sleep(0.5)
     
-    # Generate realistic test results based on scenario
-    tests = []
-    
-    if scenario_id == "dru_remote_check":
-        tests = [
-            {
-                "name": "Remote Unit Discovery",
-                "status": "PASS",
-                "message": "Found 3 remote units",
-                "duration_ms": random.randint(500, 1500)
-            },
-            {
-                "name": "Signal Quality Check",
-                "status": "PASS",
-                "message": "Signal strength: -45 dBm (Good)",
-                "duration_ms": random.randint(300, 800)
-            },
-            {
-                "name": "Data Transmission Test",
-                "status": random.choice(["PASS", "PASS", "FAIL"]),  # 66% success rate
-                "message": "Bidirectional data test",
-                "duration_ms": random.randint(800, 2000)
-            }
-        ]
-    elif scenario_id == "batch_remote_commands":
-        # Generate multiple command tests
-        commands = ["Status Query", "Reset Command", "Config Read", "Diagnostic", "Version Check"]
-        for cmd in commands:
-            tests.append({
-                "name": f"Remote Command: {cmd}",
-                "status": random.choice(["PASS", "PASS", "PASS", "FAIL"]),  # 75% success rate
-                "message": f"Executed {cmd.lower()}",
-                "duration_ms": random.randint(200, 1000)
-            })
+    # Determinar tipo de comando basado en el escenario
+    if scenario_id == "master_test" or device_type.lower() == "master":
+        command_type = CommandType.MASTER
+    elif scenario_id == "set_test" or device_type.lower() == "set":
+        command_type = CommandType.SET
     else:
-        # Generic device discovery
-        tests = [
-            {
-                "name": "Network Scan",
-                "status": "PASS",
-                "message": f"Discovered device at {ip_address}",
-                "duration_ms": random.randint(1000, 3000)
-            },
-            {
-                "name": "Protocol Detection",
-                "status": "PASS",
-                "message": "Modbus TCP protocol detected",
-                "duration_ms": random.randint(500, 1200)
-            }
-        ]
+        command_type = CommandType.REMOTE
     
-    # Calculate overall status
-    passed_tests = len([t for t in tests if t["status"] == "PASS"])
-    total_tests = len(tests)
-    overall_status = "PASS" if passed_tests / total_tests >= 0.8 else "FAIL"
+    # Ejecutar validación batch en modo mock
+    validator = BatchCommandsValidator()
+    result = await asyncio.to_thread(
+        validator.validate_batch_commands,
+        ip_address=ip_address,
+        command_type=command_type,
+        mode="mock",
+        selected_commands=None
+    )
+    
+    # Convertir resultados a formato compatible con la UI
+    tests = []
+    for cmd_result in result.get("results", []):
+        # Determinar si es comando SET
+        is_set_command = cmd_result['command'].startswith('set_') or cmd_result['command'].startswith('remote_set_')
+        
+        tests.append({
+            "name": f"{command_type.value.title()} Command: {cmd_result['command']}",
+            "status": cmd_result["status"],
+            "message": cmd_result["message"],
+            "duration_ms": cmd_result["duration_ms"],
+            "details": cmd_result.get("details", ""),
+            "response_data": cmd_result.get("response_data", ""),
+            "decoded_values": cmd_result.get("decoded_values", {}),
+            "is_set_command": is_set_command
+        })
     
     return JSONResponse({
         "status": "completed",
-        "overall_status": overall_status,
-        "message": f"Simulated validation completed: {passed_tests}/{total_tests} tests passed",
+        "overall_status": result["overall_status"],
+        "message": f"Validation completed: {result['statistics']['passed']}/{result['statistics']['total_commands']} commands passed",
         "device_ip": ip_address,
         "scenario": scenario_id,
-        "mode": "simulated",
-        "timestamp": datetime.now().isoformat(),
+        "mode": "mock",
+        "timestamp": result["timestamp"],
         "tests": tests,
         "simulation": True,
-        "total_duration_ms": sum(t["duration_ms"] for t in tests)
+        "total_duration_ms": result["duration_ms"],
+        "statistics": result["statistics"],
+        "command_type": command_type.value
     })
 
 # FastAPI app instance
@@ -404,32 +389,74 @@ active_tasks = {}
 
 async def run_validation_with_logging(client_id: str, request_data: Dict[str, Any]):
     """Execute validation with detailed real-time logging"""
+    print(f"DEBUG: run_validation_with_logging called with client_id: {client_id}")
+    
+    # Esperar a que el WebSocket se conecte
+    max_wait = 2  # segundos máximo de espera
+    waited = 0
+    while client_id not in manager.active_connections and waited < max_wait:
+        print(f"DEBUG: Waiting for WebSocket connection... ({waited}s)")
+        await asyncio.sleep(1)
+        waited += 1
+    
+    if client_id not in manager.active_connections:
+        print(f"DEBUG: WebSocket never connected for client {client_id}")
+        return
+    
     try:
+        print(f"DEBUG: Sending initial log for client {client_id}")
+        await manager.send_log(client_id, "[DEBUG] 🚀 Starting validation function")
+        
         device_config = request_data.get("device_config", {})
         ip_address = device_config.get("ip_address", "N/A")
         device_type = device_config.get("device_type", "Unknown")
         mode = request_data.get("mode", "mock")
         
         await manager.send_log(client_id, f"[INFO] 🚀 Iniciando validación {device_type} en {ip_address} (modo: {mode})")
-        await manager.send_log(client_id, f"[INFO] 🔌 Estableciendo conexión TCP a {ip_address}:65050...")
-        await asyncio.sleep(1)
         
-        await manager.send_log(client_id, "[DEBUG] 📤 Enviando comando [Temperatura]: 7E 02 00 00 01 00 00 00 02 00 ... 01 7E")
-        await asyncio.sleep(1.5)
+        # Crear callback de logging para WebSocket
+        async def websocket_log_callback(message: str):
+            await manager.send_log(client_id, message)
         
-        await manager.send_log(client_id, "[DEBUG] 📥 Respuesta recibida: 7E 82 00 00 01 00 00 00 02 00 ... A6 7E")
-        await asyncio.sleep(0.5)
+        # Crear instancia del validador con callback de logging
+        validator = BatchCommandsValidator(log_callback=websocket_log_callback)
         
-        if "error" in device_type.lower() or "fail" in device_type.lower():
-            await manager.send_log(client_id, "[ERROR] ❌ Checksum inválido. Esperado: A6, Recibido: A5")
-            result = {"status": "FAIL", "message": "Error de comunicación - Checksum inválido"}
+        # Determinar el tipo de comando basado en el device_type
+        device_type = device_config.get("device_type", "remote").lower()
+        if device_type == "master":
+            command_type = CommandType.MASTER
+        elif device_type == "set":
+            command_type = CommandType.SET
         else:
-            await manager.send_log(client_id, "[INFO] ✅ Checksum válido. Decodificando respuesta...")
-            await manager.send_log(client_id, "[INFO] 🌡️ Temperatura extraída: 35°C (dentro de rangos normales)")
-            result = {"status": "PASS", "message": "Validación exitosa - Temperatura: 35°C"}
+            command_type = CommandType.REMOTE  # default
         
-        await manager.send_log(client_id, f"[SUCCESS] ✅ Validación completada: {result['status']}")
-        active_tasks[client_id] = result
+        # Ejecutar validación en un thread separado para no bloquear el event loop
+        result = await asyncio.to_thread(
+            validator.validate_batch_commands,
+            ip_address=ip_address,
+            command_type=command_type,
+            mode=mode,
+            selected_commands=None  # None means all commands
+        )
+        
+        # Actualizar estado de la tarea
+        overall_status = result.get("overall_status", "FAIL")
+        stats = result.get("statistics", {})
+        
+        if overall_status == "PASS":
+            await manager.send_log(client_id, f"[SUCCESS] ✅ Validación completada: {stats.get('passed', 0)}/{stats.get('total_commands', 0)} comandos exitosos")
+            active_tasks[client_id] = {
+                "status": "PASS",
+                "message": "Validación completada exitosamente",
+                "details": result
+            }
+        else:
+            await manager.send_log(client_id, f"[ERROR] ❌ Validación fallida: {stats.get('failed', 0)} comandos fallidos")
+            active_tasks[client_id] = {
+                "status": "FAIL",
+                "message": f"Validación fallida: {stats.get('failed', 0)} errores",
+                "details": result
+            }
         
     except Exception as e:
         error_msg = f"[ERROR] ❌ Error durante validación: {str(e)}"
@@ -455,11 +482,10 @@ async def root(request: Request):
 @app.get("/api/test")
 async def test_endpoint():
     """Test endpoint to verify API functionality"""
-    simulation_mode = os.environ.get('SIMULATION_MODE', 'false').lower() == 'true'
     return {
         "status": "success",
         "message": "API is working",
-        "simulation_mode": simulation_mode,
+        "simulation_mode": "configurable",  # Now configurable via UI
         "timestamp": datetime.now().isoformat()
     }
 
@@ -470,17 +496,8 @@ async def get_validation_scenarios():
     return {
         "scenarios": [
             {
-                "id": "dru_remote_check", 
-                "name": "DRU Remote Device",
-                "description": "Validates DRU remote device communication",
-                "enabled": True,
-                "device_type": "dru_ethernet",
-                "default_ip": "192.168.11.100",
-                "default_hostname": "dru34132"
-            },
-            {
-                "id": "batch_remote_commands",
-                "name": "Batch Remote Commands",
+                "id": "remote_test",
+                "name": "Remote Test",
                 "description": "Executes batch validation of all remote DRS commands",
                 "enabled": True,
                 "device_type": "drs_remote",
@@ -488,8 +505,8 @@ async def get_validation_scenarios():
                 "default_hostname": "drs-device"
             },
             {
-                "id": "drs_master_batch",
-                "name": "DRS Master Batch Commands",
+                "id": "master_test",
+                "name": "Master Test",
                 "description": "Executes batch validation of all master DRS commands",
                 "enabled": True,
                 "device_type": "drs_master",
@@ -504,8 +521,9 @@ async def get_validation_scenarios():
 async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTasks):
     """Execute device validation with current configuration and real-time logging"""
     try:
-        # Check if running in simulation mode
-        simulation_mode = os.environ.get('SIMULATION_MODE', 'false').lower() == 'true'
+        # Check if request specifies simulation mode
+        request_mode = request.get("mode", "mock")
+        simulation_mode = request_mode.lower() == "mock"
         
         if simulation_mode:
             # Return simulated validation results immediately
@@ -516,14 +534,19 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
         
         if use_websockets:
             # New WebSocket-based approach
-            client_id = str(uuid.uuid4())
+            client_id = request.get("client_id", str(uuid.uuid4()))
+            print(f"DEBUG: Starting WebSocket validation for client_id: {client_id}")
             active_tasks[client_id] = {"status": "STARTING", "message": "Iniciando validación..."}
-            background_tasks.add_task(run_validation_with_logging, client_id, request)
+            
+            # Ejecutar la validación directamente en lugar de usar background tasks
+            print(f"DEBUG: Running validation synchronously")
+            await run_validation_with_logging(client_id, request)
+            print(f"DEBUG: Validation completed")
             
             return JSONResponse({
-                "status": "started",
+                "status": "completed",
                 "client_id": client_id,
-                "message": "Validación iniciada. Conéctate al WebSocket para ver el progreso.",
+                "message": "Validación completada.",
                 "websocket_url": f"/ws/logs/{client_id}"
             })
         
@@ -537,10 +560,8 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
         # Get scenario details to determine device_type
         scenario_id = request["scenario_id"]
         device_type_mapping = {
-            "dru_remote_check": "dru_ethernet", 
-            "device_discovery": "discovery_ethernet",
-            "batch_remote_commands": "drs_remote",
-            "drs_master_batch": "drs_master"
+            "remote_test": "drs_remote",
+            "master_test": "drs_master"
         }
         
         # Build validation config
@@ -551,18 +572,13 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
             "mode": request["mode"]
         }
         
-        # Add additional parameters for DRU
-        if scenario_id == "dru_remote_check":
-            validation_config["optical_port"] = 1
-            validation_config["command"] = 155
-        
         # Add thresholds if provided
         if "thresholds" in request:
             validation_config.update(request["thresholds"])
         
         # Execute validation
-        if scenario_id == "batch_remote_commands":
-            # Special handling for batch remote commands scenario
+        if scenario_id == "remote_test":
+            # Special handling for remote test scenario
             if BATCH_VALIDATION_AVAILABLE:
                 try:
                     validator = BatchCommandsValidator()
@@ -582,7 +598,7 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
                     
                     result = {
                         "overall_status": batch_result["overall_status"],  # Use batch validator's overall status (80% threshold)
-                        "message": f"Batch remote commands validation completed. {len([c for c in results_list if c['status'] == 'PASS'])}/{len(results_list)} commands passed.",
+                        "message": f"Remote test validation completed. {len([c for c in results_list if c['status'] == 'PASS'])}/{len(results_list)} commands passed.",
                         "mode": validation_config["mode"],
                         "tests": [
                             {
@@ -602,11 +618,11 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
                 except Exception as e:
                     result = {
                         "overall_status": "FAIL",
-                        "message": f"Batch remote commands validation failed: {str(e)}",
+                        "message": f"Remote test validation failed: {str(e)}",
                         "mode": validation_config["mode"],
                         "tests": [
                             {
-                                "name": "Batch Remote Commands",
+                                "name": "Remote Test",
                                 "status": "FAIL",
                                 "message": f"Validation error: {str(e)}",
                                 "details": "Failed to execute remote commands batch"
@@ -622,7 +638,7 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
                     "mode": validation_config["mode"],
                     "tests": [
                         {
-                            "name": "Batch Remote Commands",
+                            "name": "Remote Test",
                             "status": "FAIL",
                             "message": "Batch commands validator not available",
                             "details": "Required dependencies not installed"
@@ -631,8 +647,8 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
                     "duration_ms": 0,
                     "timestamp": datetime.now().isoformat()
                 }
-        elif scenario_id == "drs_master_batch":
-            # Special handling for DRS master batch commands scenario
+        elif scenario_id == "master_test":
+            # Special handling for master test scenario
             if BATCH_VALIDATION_AVAILABLE:
                 try:
                     validator = BatchCommandsValidator()
@@ -652,7 +668,7 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
                     
                     result = {
                         "overall_status": batch_result["overall_status"],  # Use batch validator's overall status (80% threshold)
-                        "message": f"DRS Master batch commands validation completed. {len([c for c in results_list if c['status'] == 'PASS'])}/{len(results_list)} commands passed.",
+                        "message": f"Master test validation completed. {len([c for c in results_list if c['status'] == 'PASS'])}/{len(results_list)} commands passed.",
                         "mode": validation_config["mode"],
                         "tests": [
                             {
@@ -672,11 +688,11 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
                 except Exception as e:
                     result = {
                         "overall_status": "FAIL",
-                        "message": f"DRS Master batch commands validation failed: {str(e)}",
+                        "message": f"Master test validation failed: {str(e)}",
                         "mode": validation_config["mode"],
                         "tests": [
                             {
-                                "name": "DRS Master Batch Commands",
+                                "name": "Master Test",
                                 "status": "FAIL",
                                 "message": f"Validation error: {str(e)}",
                                 "details": "Failed to execute master commands batch"
@@ -692,7 +708,7 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
                     "mode": validation_config["mode"],
                     "tests": [
                         {
-                            "name": "DRS Master Batch Commands",
+                            "name": "Master Test",
                             "status": "FAIL",
                             "message": "Batch commands validator not available",
                             "details": "Required dependencies not installed"
@@ -749,11 +765,11 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
 
 
 @app.post("/api/validation/ping/{ip_address}")
-async def ping_device_endpoint(ip_address: str):
+async def ping_device_endpoint(ip_address: str, mode: str = "mock"):
     """Test basic network connectivity to device"""
     try:
-        # Check if running in simulation mode
-        simulation_mode = os.environ.get('SIMULATION_MODE', 'false').lower() == 'true'
+        # Check if request specifies simulation mode
+        simulation_mode = mode.lower() == "mock"
         
         if simulation_mode:
             # Simulate different responses based on IP for testing
