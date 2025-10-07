@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Real-time Validation Logs</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        #log { 
+            background: #252526; 
+            padding: 15px; 
+            border-radius: 5px; 
+            height: 400px; 
+            overflow-y: auto; 
+            border: 1px solid #3e3e42;
+        }
+        .log-line { margin: 2px 0; }
+        .INFO { color: #4ec9b0; }
+        .SUCCESS { color: #6a9955; }
+        .ERROR { color: #f48771; }
+        .WARNING { color: #dcdcaa; }
+        button { 
+            padding: 10px 20px; 
+            margin: 10px 5px; 
+            background: #007acc; 
+            color: white; 
+            border: none; 
+            border-radius: 3px; 
+            cursor: pointer;
+        }
+        button:hover { background: #005a9e; }
+        #status { margin: 10px 0; padding: 10px; background: #252526; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test: Validación en Tiempo Real</h1>
+    
+    <div id="status">
+        Estado: <span id="statusText">Esperando...</span>
+    </div>
+    
+    <button onclick="startValidation()">▶️ Iniciar Validación</button>
+    <button onclick="clearLog()">🗑️ Limpiar Log</button>
+    
+    <h3>Logs en Tiempo Real:</h3>
+    <div id="log"></div>
+
+    <script>
+        const logDiv = document.getElementById('log');
+        const statusText = document.getElementById('statusText');
+        let ws = null;
+        let clientId = null;
+
+        function addLog(message, type = 'INFO') {
+            const line = document.createElement('div');
+            line.className = `log-line ${type}`;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(line);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function setStatus(text, color = '#4ec9b0') {
+            statusText.textContent = text;
+            statusText.style.color = color;
+        }
+
+        function clearLog() {
+            logDiv.innerHTML = '';
+        }
+
+        async function startValidation() {
+            try {
+                setStatus('Iniciando validación...', '#dcdcaa');
+                addLog('🚀 Enviando solicitud de validación...');
+
+                // Step 1: Start validation
+                const response = await fetch('http://localhost:8080/api/validation/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        scenario_id: 'test_realtime',
+                        ip_address: '192.168.1.100',
+                        port: 10000,
+                        timeout: 5,
+                        command_type: 'remote',
+                        mode: 'mock',
+                        use_websockets: true
+                    })
+                });
+
+                const result = await response.json();
+                addLog(`✅ Respuesta recibida: ${result.status}`);
+                
+                if (result.client_id) {
+                    clientId = result.client_id;
+                    addLog(`📋 Client ID: ${clientId}`);
+                    
+                    // Step 2: Connect WebSocket
+                    connectWebSocket(clientId);
+                } else {
+                    addLog('❌ No se recibió client_id', 'ERROR');
+                    setStatus('Error: No client_id', '#f48771');
+                }
+
+            } catch (error) {
+                addLog(`❌ Error: ${error.message}`, 'ERROR');
+                setStatus('Error en validación', '#f48771');
+            }
+        }
+
+        function connectWebSocket(clientId) {
+            const wsUrl = `ws://localhost:8080/ws/logs/${clientId}`;
+            addLog(`📡 Conectando a WebSocket: ${wsUrl}`);
+            setStatus('Conectando WebSocket...', '#dcdcaa');
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                addLog('✅ WebSocket conectado', 'SUCCESS');
+                setStatus('Recibiendo logs en tiempo real...', '#4ec9b0');
+            };
+
+            ws.onmessage = (event) => {
+                const message = event.data;
+                
+                // Check for validation_complete JSON message
+                if (message.startsWith('{')) {
+                    try {
+                        const data = JSON.parse(message);
+                        if (data.type === 'validation_complete') {
+                            addLog('✅ Validación completada!', 'SUCCESS');
+                            setStatus('Validación completada', '#6a9955');
+                            return;
+                        }
+                    } catch (e) {
+                        // Not JSON, continue
+                    }
+                }
+                
+                if (message === '---END_OF_LOG---') {
+                    addLog('📄 Log completado', 'INFO');
+                    ws.close();
+                    setStatus('Logs completados', '#6a9955');
+                    return;
+                }
+
+                // Determine log type from message
+                let logType = 'INFO';
+                if (message.includes('[ERROR]')) logType = 'ERROR';
+                else if (message.includes('[SUCCESS]')) logType = 'SUCCESS';
+                else if (message.includes('[WARNING]')) logType = 'WARNING';
+
+                addLog(message, logType);
+            };
+
+            ws.onerror = (error) => {
+                addLog(`❌ Error en WebSocket: ${error}`, 'ERROR');
+                setStatus('Error en WebSocket', '#f48771');
+            };
+
+            ws.onclose = () => {
+                addLog('🔌 WebSocket cerrado');
+                if (statusText.textContent.includes('tiempo real')) {
+                    setStatus('Desconectado', '#dcdcaa');
+                }
+            };
+        }
+    </script>
+</body>
+</html>
