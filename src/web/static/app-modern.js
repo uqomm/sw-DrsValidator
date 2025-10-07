@@ -81,6 +81,14 @@ class DRSValidatorUI {
         document.getElementById('saveConfigBtn').addEventListener('click', () => {
             this.saveDeviceConfiguration();
         });
+        
+        // Export results button
+        const exportBtn = document.getElementById('exportResultsBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                this.exportResults();
+            });
+        }
 
         // Window resize
         window.addEventListener('resize', () => {
@@ -186,10 +194,7 @@ class DRSValidatorUI {
         if (currentPage) {
             const tabNames = {
                 'validation': 'Validación',
-                'results': 'Resultados',
-                'batch': 'Comandos Batch',
-                'monitoring': 'Monitoreo',
-                'help': 'Ayuda'
+                'results': 'Resultados'
             };
             currentPage.textContent = tabNames[tabId] || 'DRS Validator';
         }
@@ -463,6 +468,27 @@ class DRSValidatorUI {
                 ws.onmessage = (event) => {
                     const message = event.data;
                     
+                    // Check if message is JSON (validation_complete event)
+                    if (message.startsWith('{')) {
+                        try {
+                            const data = JSON.parse(message);
+                            if (data.type === 'validation_complete') {
+                                this.appendToOutput(`[INFO] ✅ Validación completada. Cambiando a pestaña de resultados...`);
+                                console.log('Validation complete, switching to results tab.');
+                                
+                                // Wait a moment then switch to results and load them
+                                setTimeout(() => {
+                                    this.switchTab('results');
+                                    this.loadPreviousResults();
+                                }, 1000);
+                                return;
+                            }
+                        } catch (e) {
+                            // Not JSON, treat as regular log message
+                            console.warn('Failed to parse WebSocket message as JSON:', message);
+                        }
+                    }
+                    
                     if (message === '---END_OF_LOG---') {
                         logEnded = true;
                         this.appendToOutput(`[INFO] 📄 Log completado`);
@@ -547,11 +573,8 @@ class DRSValidatorUI {
         this.updateProgressText('Validación completada');
         this.showToast('success', 'Validación completada exitosamente');
         
-        // Auto-switch to results tab after completion
-        setTimeout(() => {
-            this.switchTab('results');
-            this.loadPreviousResults();
-        }, 2000);
+        // Tab switching is now handled by WebSocket validation_complete event
+        // No longer auto-switching to results tab here
     }
 
     /* ========================================
@@ -708,7 +731,7 @@ class DRSValidatorUI {
         if (!results || results.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
+                    <td colspan="7" class="text-center text-muted py-4">
                         <i class="bi bi-inbox display-6 d-block mb-2"></i>
                         No hay validaciones disponibles
                     </td>
@@ -717,45 +740,156 @@ class DRSValidatorUI {
             return;
         }
 
-        tbody.innerHTML = results.map(result => `
-            <tr>
-                <td>${new Date(result.timestamp).toLocaleString()}</td>
-                <td>${result.device_ip}:${result.port}</td>
-                <td>${result.scenario}</td>
-                <td>
-                    <span class="status-indicator status-${result.status === 'success' ? 'success' : 'error'}">
-                        <i class="bi bi-circle-fill"></i>
-                        ${result.status === 'success' ? 'Exitoso' : 'Falló'}
-                    </span>
-                </td>
-                <td>${result.duration || 'N/A'}</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary" onclick="drsUI.viewResult('${result.id}')">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="drsUI.downloadResult('${result.id}')">
-                        <i class="bi bi-download"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = results.map(result => {
+            // Extract data from the new format
+            const timestamp = result.timestamp || 'N/A';
+            const request = result.request || {};
+            const resultData = result.result || {};
+            const filename = result.filename || '';
+            
+            const deviceIp = request.ip_address || 'N/A';
+            const deviceType = request.device_type || 'N/A';
+            const serialNumber = request.serial_number || 'N/A';
+            const scenario = request.hostname || deviceType;
+            const overallStatus = resultData.overall_status || 'UNKNOWN';
+            const stats = resultData.statistics || {};
+            const duration = resultData.total_duration_ms ? `${resultData.total_duration_ms}ms` : 'N/A';
+            
+            const isSuccess = overallStatus === 'PASS';
+            const statusClass = isSuccess ? 'success' : 'error';
+            const statusText = isSuccess ? 'Exitoso' : 'Falló';
+            const statusIcon = isSuccess ? 'check-circle-fill' : 'x-circle-fill';
+            
+            return `
+                <tr>
+                    <td>${new Date(timestamp).toLocaleString()}</td>
+                    <td>${deviceIp}</td>
+                    <td><span class="badge bg-secondary">${serialNumber}</span></td>
+                    <td>${scenario}</td>
+                    <td>
+                        <span class="status-indicator status-${statusClass}">
+                            <i class="bi bi-${statusIcon}"></i>
+                            ${statusText} (${stats.passed || 0}/${stats.total_commands || 0})
+                        </span>
+                    </td>
+                    <td>${duration}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="drsUI.viewResult('${filename}')">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="drsUI.downloadResult('${filename}')">
+                            <i class="bi bi-download"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
     async viewResult(resultId) {
         try {
             const response = await fetch(`/api/results/${resultId}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const result = await response.json();
             
             // Show result in modal or new tab
             this.showResultModal(result);
         } catch (error) {
-            this.showToast('error', 'Error al cargar el resultado');
+            console.error('Error loading result:', error);
+            this.showToast('error', `Error al cargar el resultado: ${error.message}`);
         }
+    }
+    
+    showResultModal(data) {
+        // Create modal content with the result data
+        const resultData = data.result || data;
+        const request = data.request || {};
+        
+        const modalHTML = `
+            <div class="modal fade" id="resultModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">📊 Resultado de Validación</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <h6>Información del Dispositivo</h6>
+                                    <p><strong>IP:</strong> ${request.ip_address || 'N/A'}</p>
+                                    <p><strong>Tipo:</strong> ${request.device_type || 'N/A'}</p>
+                                    <p><strong>Serial:</strong> ${request.serial_number || 'N/A'}</p>
+                                    <p><strong>Modo:</strong> ${request.live_mode ? 'Live' : 'Mock'}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Estadísticas</h6>
+                                    <p><strong>Estado:</strong> <span class="badge bg-${resultData.overall_status === 'PASS' ? 'success' : 'danger'}">${resultData.overall_status}</span></p>
+                                    <p><strong>Comandos:</strong> ${resultData.statistics?.passed}/${resultData.statistics?.total_commands}</p>
+                                    <p><strong>Duración:</strong> ${resultData.duration_ms}ms</p>
+                                    <p><strong>Tasa de Éxito:</strong> ${resultData.statistics?.success_rate}%</p>
+                                </div>
+                            </div>
+                            <h6>Resultados de Comandos</h6>
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Comando</th>
+                                            <th>Estado</th>
+                                            <th>Trama</th>
+                                            <th>Respuesta</th>
+                                            <th>Duración</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${resultData.results?.map(r => `
+                                            <tr>
+                                                <td>${r.command}</td>
+                                                <td><span class="badge bg-${r.status === 'PASS' ? 'success' : 'danger'}">${r.status}</span></td>
+                                                <td><code>${r.details}</code></td>
+                                                <td><code>${r.response_data?.substring(0, 50)}...</code></td>
+                                                <td>${r.duration_ms}ms</td>
+                                            </tr>
+                                        `).join('') || '<tr><td colspan="5">No hay resultados</td></tr>'}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('resultModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Show modal using Bootstrap
+        const modal = new bootstrap.Modal(document.getElementById('resultModal'));
+        modal.show();
     }
 
     async downloadResult(resultId) {
         try {
             const response = await fetch(`/api/results/${resultId}/download`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const blob = await response.blob();
             
             const url = window.URL.createObjectURL(blob);
@@ -773,13 +907,32 @@ class DRSValidatorUI {
 
     async exportResults() {
         try {
-            const response = await fetch('/api/results/export');
+            this.showToast('info', 'Exportando resultados...');
+            
+            const response = await fetch('/api/results/export/csv');
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const blob = await response.blob();
             
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `drs_validation_results_${new Date().toISOString().split('T')[0]}.csv`;
+            
+            // Get filename from Content-Disposition header if available
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = `drs_validation_results_${new Date().toISOString().split('T')[0]}.csv`;
+            
+            if (contentDisposition) {
+                const matches = /filename=([^;]+)/.exec(contentDisposition);
+                if (matches && matches[1]) {
+                    filename = matches[1].trim();
+                }
+            }
+            
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -787,44 +940,8 @@ class DRSValidatorUI {
             
             this.showToast('success', 'Resultados exportados exitosamente');
         } catch (error) {
-            this.showToast('error', 'Error al exportar resultados');
-        }
-    }
-
-    /* ========================================
-       BATCH OPERATIONS
-    ======================================== */
-    async uploadBatchFile() {
-        const fileInput = document.getElementById('batchFile');
-        if (!fileInput.files[0]) {
-            this.showToast('warning', 'Por favor seleccione un archivo');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-
-        const btn = document.getElementById('uploadBatchBtn');
-        this.setButtonLoading(btn, true);
-
-        try {
-            const response = await fetch('/api/batch/upload', {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-            
-            if (result.success) {
-                this.showToast('success', 'Archivo batch cargado y ejecutado');
-                this.switchTab('validation');
-            } else {
-                this.showToast('error', `Error: ${result.error}`);
-            }
-        } catch (error) {
-            this.showToast('error', 'Error al cargar archivo batch');
-        } finally {
-            this.setButtonLoading(btn, false);
+            console.error('Error exporting results:', error);
+            this.showToast('error', `Error al exportar resultados: ${error.message}`);
         }
     }
 
@@ -842,10 +959,6 @@ class DRSValidatorUI {
                 case '2':
                     e.preventDefault();
                     this.switchTab('results');
-                    break;
-                case '3':
-                    e.preventDefault();
-                    this.switchTab('batch');
                     break;
                 case 'b':
                     e.preventDefault();
