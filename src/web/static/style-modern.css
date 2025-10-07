@@ -381,6 +381,15 @@ body {
     display: block !important;
 }
 
+/* Tab Content Visibility Control */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
 /* Row layout for tab content */
 .tab-content .row {
     display: flex !important;
