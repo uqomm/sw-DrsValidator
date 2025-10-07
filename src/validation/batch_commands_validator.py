@@ -22,7 +22,14 @@ from dataclasses import dataclass
 from enum import Enum
 
 # Import hex frames and decoder integration
-from .hex_frames import get_master_frame, get_remote_frame, validate_frame_format
+from .hex_frames import (
+    get_master_frame, 
+    get_remote_frame, 
+    get_set_frame,
+    get_master_command_frame,
+    get_remote_command_frame,
+    validate_frame_format
+)
 from .decoder_integration import (
     CommandDecoderMapping, 
     create_mock_decoder_response
@@ -66,6 +73,20 @@ class CommandTestResult:
     decoded_values: Dict[str, Any] = None
     duration_ms: int = 0
     error: str = ""
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convierte el resultado a diccionario serializable JSON"""
+        return {
+            "command": self.command,
+            "command_type": self.command_type.value if isinstance(self.command_type, CommandType) else str(self.command_type),
+            "status": self.status.value if isinstance(self.status, ValidationResult) else str(self.status),
+            "message": self.message,
+            "details": self.details,
+            "response_data": self.response_data,
+            "decoded_values": self.decoded_values or {},
+            "duration_ms": self.duration_ms,
+            "error": self.error
+        }
 
 class BatchCommandsValidator:
     """
@@ -75,16 +96,57 @@ class BatchCommandsValidator:
     con soporte para modo mock (simulación) y live (conexión real).
     """
     
-    def __init__(self, timeout_per_command: int = 3):
+    def __init__(self, timeout_per_command: int = 3, log_callback=None):
         """
         Inicializar el validador batch.
         
         Args:
             timeout_per_command: Timeout en segundos para cada comando individual
+            log_callback: Función opcional para logging en tiempo real (async)
         """
         self.timeout_per_command = timeout_per_command
         self.socket_timeout = timeout_per_command
+        self.log_callback = log_callback
+    
+    async def _log(self, message: str, level: str = "INFO"):
+        """
+        Envía un mensaje de log usando el callback si está disponible.
         
+        Args:
+            message: Mensaje a loguear
+            level: Nivel del log (INFO, DEBUG, ERROR, etc.)
+        """
+        if self.log_callback:
+            try:
+                await self.log_callback(f"[{level}] {message}")
+            except Exception as e:
+                print(f"Warning: Failed to send log message: {e}")
+    
+    def _log_sync(self, message: str, level: str = "INFO"):
+        """
+        Envía un mensaje de log de forma síncrona (para contextos no-async).
+        
+        Args:
+            message: Mensaje a loguear
+            level: Nivel del log (INFO, DEBUG, ERROR, etc.)
+        """
+        if self.log_callback:
+            try:
+                # Si hay un event loop corriendo, crear una tarea async
+                import asyncio
+                try:
+                    loop = asyncio.get_running_loop()
+                    # Crear tarea para ejecutar el callback async
+                    asyncio.create_task(self.log_callback(f"[{level}] {message}"))
+                except RuntimeError:
+                    # No hay event loop, usar print como fallback
+                    print(f"[{level}] {message}")
+            except Exception as e:
+                print(f"Warning: Failed to send sync log message: {e}")
+        else:
+            # Fallback cuando no hay callback
+            print(f"[{level}] {message}")
+    
     def validate_batch_commands(
         self, 
         ip_address: str,
@@ -130,32 +192,58 @@ class BatchCommandsValidator:
             "total_commands": len(commands),
             "commands_tested": [result.command for result in results],
             "statistics": stats,
-            "results": [result.__dict__ for result in results],
+            "results": [result.to_dict() for result in results],
             "duration_ms": total_duration,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
         }
     
-    def _get_commands_for_type(self, command_type: CommandType) -> List[str]:
-        """Obtiene la lista de comandos para el tipo especificado."""
+    def _get_commands_for_type(self, command_type: CommandType) -> Dict[str, str]:
+        """Obtiene todos los comandos (GET + SET) para el tipo especificado."""
+        from .hex_frames import (
+            get_all_master_commands,
+            get_all_remote_commands,
+            get_all_master_set_commands,
+            get_all_remote_set_commands
+        )
+        
+        commands = {}
+        
         if command_type == CommandType.MASTER:
-            return get_all_master_commands()
+            # Agregar comandos GET
+            for cmd in get_all_master_commands():
+                commands[cmd] = get_master_command_frame(cmd)
+            # Agregar comandos SET
+            commands.update(get_all_master_set_commands())
+            
         elif command_type == CommandType.REMOTE:
-            return get_all_remote_commands()
+            # Agregar comandos GET
+            for cmd in get_all_remote_commands():
+                commands[cmd] = get_remote_command_frame(cmd)
+            # Agregar comandos SET
+            commands.update(get_all_remote_set_commands())
+            
         elif command_type == CommandType.SET:
-            return get_all_set_commands()
-        else:
-            return []
+            # Solo comandos SET (modo legacy)
+            commands.update(get_all_master_set_commands())
+            commands.update(get_all_remote_set_commands())
+            
+        return commands
     
-    def _execute_mock_batch(self, commands: List[str], command_type: CommandType) -> List[CommandTestResult]:
+    def _execute_mock_batch(self, commands: Dict[str, str], command_type: CommandType) -> List[CommandTestResult]:
         """
         Ejecuta validación batch en modo mock (simulado).
         
         En modo mock, todos los comandos simulan respuestas exitosas
         con datos realistas para propósitos de testing.
         """
+        from .real_drs_responses_20250926_194004 import REAL_DRS_RESPONSES as MASTER_RESPONSES
+        from .real_drs_remote_responses import REAL_DRS_RESPONSES as REMOTE_RESPONSES
+        from .set_command_responses import get_master_set_mock_response, get_remote_set_mock_response
+        from .hex_frames import get_master_set_command_frame, get_remote_set_command_frame
+        
         results = []
         
-        for command in commands:
+        for cmd_name, hex_frame in commands.items():
             start_time = time.time()
             
             # Simular duración realista (50-200ms)
@@ -164,16 +252,31 @@ class BatchCommandsValidator:
             
             duration = int((time.time() - start_time) * 1000)
             
-            # Generar respuesta mock realista
-            mock_response = self._generate_mock_response(command)
-            mock_decoded = self._generate_mock_decoded_values(command)
+            # Determinar si es comando GET o SET
+            is_set_command = cmd_name.startswith('set_') or cmd_name.startswith('remote_set_')
             
+            # Obtener respuesta mock según tipo de comando
+            if is_set_command:
+                if command_type == CommandType.MASTER:
+                    mock_response = get_master_set_mock_response(cmd_name)
+                else:
+                    mock_response = get_remote_set_mock_response(cmd_name)
+                mock_decoded = {}  # Comandos SET no tienen valores decodificados
+            else:
+                # Comandos GET (lógica existente)
+                if command_type == CommandType.MASTER:
+                    mock_response = MASTER_RESPONSES.get(cmd_name, "")
+                else:
+                    mock_response = REMOTE_RESPONSES.get(cmd_name, "")
+                mock_decoded = self._generate_mock_decoded_values(cmd_name)
+            
+            # Crear resultado
             result = CommandTestResult(
-                command=command,
+                command=cmd_name,
                 command_type=command_type,
-                status=ValidationResult.PASS,
-                message=f"✅ Mock validation successful for {command}",
-                details=f"Simulated DRS {command_type.value} command response",
+                status=ValidationResult.PASS if mock_response else ValidationResult.FAIL,
+                message=f"✅ Mock validation successful for {cmd_name}" if mock_response else f"❌ No mock response for {cmd_name}",
+                details=f"Trama enviada: {hex_frame}",
                 response_data=mock_response,
                 decoded_values=mock_decoded,
                 duration_ms=duration
@@ -183,21 +286,37 @@ class BatchCommandsValidator:
         
         return results
     
-    def _execute_live_batch(self, ip_address: str, commands: List[str], command_type: CommandType) -> List[CommandTestResult]:
+    def _execute_live_batch(self, ip_address: str, commands: Dict[str, str], command_type: CommandType) -> List[CommandTestResult]:
         """
         Ejecuta validación batch en modo live (conexión real).
         
         Conecta al dispositivo DRS y ejecuta comandos reales usando
         tramas hexadecimales del protocolo Santone.
         """
+        # Log inicial
+        self._log_sync(f"🔌 Iniciando validación batch de {len(commands)} comandos {command_type.value} en {ip_address}")
+        
         results = []
         
-        for command in commands:
+        for i, (command, hex_frame) in enumerate(commands.items(), 1):
+            self._log_sync(f"📤 Ejecutando comando {i}/{len(commands)}: {command}")
             result = self._execute_single_live_command(ip_address, command, command_type)
             results.append(result)
             
+            # Log del resultado
+            if result.status == ValidationResult.PASS:
+                self._log_sync(f"✅ Comando {command}: EXITOSO ({result.duration_ms}ms)")
+            elif result.status == ValidationResult.TIMEOUT:
+                self._log_sync(f"⏱️ Comando {command}: TIMEOUT ({result.duration_ms}ms)")
+            else:
+                self._log_sync(f"❌ Comando {command}: ERROR - {result.error}")
+            
             # Pequeña pausa entre comandos para evitar saturar el dispositivo
             time.sleep(0.1)
+        
+        # Log final
+        successful = sum(1 for r in results if r.status == ValidationResult.PASS)
+        self._log_sync(f"📊 Validación completada: {successful}/{len(commands)} comandos exitosos")
         
         return results
     
@@ -292,7 +411,8 @@ class BatchCommandsValidator:
         try:
             # Convertir trama hex a bytes
             frame_bytes = bytes.fromhex(hex_frame)
-            print(f"DEBUG: Connecting to {ip_address}:65050 with frame {hex_frame}")
+            self._log_sync(f"🔌 Conectando a {ip_address}:65050")
+            self._log_sync(f"📤 Enviando trama: {hex_frame}")
             
             # Crear socket TCP
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -300,24 +420,25 @@ class BatchCommandsValidator:
             
             # Conectar al puerto DRS (65050)
             sock.connect((ip_address, 65050))
-            print(f"DEBUG: Connected successfully")
+            self._log_sync(f"✅ Conexión TCP establecida exitosamente")
             
             # Enviar comando
             sock.send(frame_bytes)
-            print(f"DEBUG: Frame sent, waiting for response...")
+            self._log_sync(f"📨 Comando enviado, esperando respuesta...")
             
             # Recibir respuesta
             response = sock.recv(1024)  # Buffer de 1KB
-            print(f"DEBUG: Response received: {response.hex().upper()}")
+            response_hex = response.hex().upper()
+            self._log_sync(f"📥 Respuesta recibida ({len(response)} bytes): {response_hex}")
             
             sock.close()
             return response
             
         except socket.timeout:
-            print(f"DEBUG: Socket timeout after {self.socket_timeout}s")
+            self._log_sync(f"⏱️ Timeout de socket después de {self.socket_timeout}s")
             return None
         except Exception as e:
-            print(f"DEBUG: Exception during TCP send: {type(e).__name__}: {e}")
+            self._log_sync(f"❌ Error durante envío TCP: {type(e).__name__}: {e}")
             return None
     
     def _decode_response(self, command: str, response: bytes) -> Dict[str, Any]:

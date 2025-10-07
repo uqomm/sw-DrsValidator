@@ -189,6 +189,117 @@ def get_all_set_commands() -> List[str]:
     """
     return list(DRS_SET_FRAMES.keys())
 
+def get_master_command_frame(command: str) -> str:
+    """Obtiene la trama hexadecimal de un comando Master específico."""
+    return DRS_MASTER_FRAMES.get(command, "")
+
+def get_remote_command_frame(command: str) -> str:
+    """Obtiene la trama hexadecimal de un comando Remote específico."""
+    return DRS_REMOTE_FRAMES.get(command, "")
+
+def get_set_command_frame(command: str) -> str:
+    """Obtiene la trama hexadecimal de un comando SET específico."""
+    return DRS_SET_FRAMES.get(command, "")
+
+def get_all_master_set_commands() -> Dict[str, str]:
+    """
+    Retorna todos los comandos SET disponibles para Master
+    
+    Returns:
+        dict: Diccionario con nombre_comando -> trama_hex
+    """
+    if not SET_COMMANDS_AVAILABLE:
+        return {}
+        
+    commands = {}
+    
+    try:
+        # SET Working Mode - WideBand
+        commands['set_working_mode_wideband'] = SetCommands.set_working_mode(wideband=True).hex().upper()
+        
+        # SET Working Mode - Channel
+        commands['set_working_mode_channel'] = SetCommands.set_working_mode(wideband=False).hex().upper()
+        
+        # SET Attenuation - Ejemplo con valores medios
+        commands['set_attenuation'] = SetCommands.set_attenuation(
+            uplink_db=15,
+            downlink_db=20,
+            device_type="dmu"
+        ).hex().upper()
+        
+        # SET Channel Activation - Primeros 8 canales ON, resto OFF
+        channels = [True] * 8 + [False] * 8
+        commands['set_channel_activation'] = SetCommands.set_channel_activation(channels).hex().upper()
+        
+        # SET Channel Frequencies - VHF
+        vhf_freqs = SetCommands.generate_vhf_frequencies()
+        commands['set_channel_frequencies_vhf'] = SetCommands.set_channel_frequencies(vhf_freqs).hex().upper()
+        
+    except Exception as e:
+        print(f"Error generating master SET commands: {e}")
+        return {}
+    
+    return commands
+
+def get_all_remote_set_commands() -> Dict[str, str]:
+    """
+    Retorna todos los comandos SET disponibles para Remote
+    (SIN set_channel_frequencies y set_channel_activation)
+    
+    Returns:
+        dict: Diccionario con nombre_comando -> trama_hex
+    """
+    if not SET_COMMANDS_AVAILABLE:
+        return {}
+        
+    commands = {}
+    
+    try:
+        # SET Working Mode - WideBand
+        commands['remote_set_working_mode_wideband'] = SetCommands.set_working_mode(wideband=True).hex().upper()
+        
+        # SET Working Mode - Channel
+        commands['remote_set_working_mode_channel'] = SetCommands.set_working_mode(wideband=False).hex().upper()
+        
+        # SET Attenuation - Ejemplo con valores medios para DRU
+        commands['remote_set_attenuation'] = SetCommands.set_attenuation(
+            uplink_db=12,
+            downlink_db=18,
+            device_type="dru"
+        ).hex().upper()
+        
+    except Exception as e:
+        print(f"Error generating remote SET commands: {e}")
+        return {}
+    
+    return commands
+
+def get_master_set_command_frame(command_name: str) -> str:
+    """
+    Obtiene la trama hexadecimal de un comando SET master específico
+    
+    Args:
+        command_name: Nombre del comando SET
+        
+    Returns:
+        str: Trama hexadecimal o cadena vacía si no existe
+    """
+    commands = get_all_master_set_commands()
+    return commands.get(command_name, "")
+
+def get_remote_set_command_frame(command_name: str) -> str:
+    """
+    Obtiene la trama hexadecimal de un comando SET remote específico
+    
+    Args:
+        command_name: Nombre del comando SET
+        
+    Returns:
+        str: Trama hexadecimal o cadena vacía si no existe
+    """
+    commands = get_all_remote_set_commands()
+    return commands.get(command_name, "")
+
 
 def get_master_frame(command: str) -> str:
     """
