@@ -189,6 +189,11 @@ class DRSValidatorUI {
             }
         }
         
+        // Load results when switching to results tab
+        if (tabId === 'results') {
+            this.loadPreviousResults();
+        }
+        
         this.currentTab = tabId;
         
         // Close sidebar on mobile after navigation
