@@ -1,292 +1,94 @@
-# DRS Validation Framework - Changelog
+# Changelog
 
-## [v3.1.0] - 2025-09-26 - ENHANCED LOGGING & DEVICE CONFIGURATION FIXES ✅
+All notable changes to this project will be documented in this file.
 
-### 🎯 **Enhanced Logging System**
-- ✅ **Command/Response Logging**: Logs detallados que muestran comandos enviados y respuestas recibidas en TCP validator
-- ✅ **Device Interaction Trace**: Log completo de interacciones con dispositivos DRS usando logging.info
-- ✅ **Persistent Result Storage**: Sistema de almacenamiento persistente de resultados de validación en `/app/results`
-- ✅ **Results History API**: Nuevo endpoint `/api/results/history` para consultar historial de validaciones
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### 🔧 **Device Configuration Fixes**
-- ✅ **Port Correction**: Cambiado puerto de dispositivo de 22 a 65050 en TCP validator
-- ✅ **TCP Connection Fix**: Corregida función `_live_tcp_connection_test` para usar puerto correcto
-- ✅ **Plugin Path Resolution**: Corregida ruta de `check_eth.py` de `/src/plugins/` a `/app/plugins/` en contenedor
-- ✅ **Container Path Compatibility**: Asegurada compatibilidad completa de rutas en entorno Docker
+## [3.2.0] - 2025-10-07
 
-### 📊 **Results History Enhancement**
-- ✅ **Persistent Results Storage**: Resultados guardados automáticamente en archivos JSON con timestamp
-- ✅ **Results History Display**: API endpoint para consultar historial completo de validaciones
-- ✅ **Metadata Preservation**: Cada resultado incluye configuración de request, timestamp y datos completos
-- ✅ **Error Result Storage**: También se guardan resultados de error para debugging
+### Added
+- **SET Command Validation**: Integrated SET commands (configuration) into the batch validation system for both Master and Remote tests.
+  - Master: 5 SET commands (working mode, attenuation, channel activation, channel frequencies)
+  - Remote: 3 SET commands (working mode, attenuation only - no channel commands)
+- **Hex Frame Display**: The validation output now displays the exact hexadecimal frames sent (📤) and received (📥) for each command.
+- **Visual Command Differentiation**: UI now visually differentiates between GET (🔍) and SET (⚙️) commands with appropriate icons and messages.
+- **Comprehensive Testing Framework**:
+  - `test_drs_validation_suite.py`: Full CLI test suite with colored output and JSON reports
+  - `run_tests.sh`: Interactive bash menu for test selection
+  - `test_set_commands_integration.py`: SET command integration tests
+  - `SISTEMA_TESTING_COMPLETO.md`: Complete testing documentation
+- **CRC Calculation Dependency**: Added `crccheck==1.3.0` for proper SET command frame generation.
+- **Validation Images**: Added band_system_validation.png, digital_board_validation_2.png, digital_board_validation_3.png
+- **Documentation Translation**: Translated connectivity questions to English
 
-### 🛠️ **Code Quality Improvements**
-- ✅ **Path Resolution**: Corregidas rutas absolutas hardcodeadas para compatibilidad Docker
-- ✅ **Logging Integration**: Agregado sistema de logging comprehensivo en TCP validator
-- ✅ **Error Handling**: Mejorado manejo de errores con logging detallado
-- ✅ **Container Compatibility**: Verificada funcionalidad completa en entorno Docker
+### Changed
+- **Batch Validation Engine**: Updated to handle both GET and SET commands in the same validation run.
+- **API Response Format**: Added `is_set_command` flag to distinguish command types in UI.
+- **UI Output**: Enhanced command display with hex frames and type-specific formatting.
 
----
+### Fixed
+- **JSON Serialization**: Corrected bug where hex frames and command details were not being included in API responses.
+- **Command Frame Generation**: Fixed SET command frame generation with proper CRC calculation.
 
-## [v3.0.0] - 2025-09-26 - REAL DEVICE RESPONSE INTEGRATION + COMPLETE DEPLOYMENT ✅
+### Technical Details
+- **Master Commands**: 15 GET + 5 SET = 20 total commands
+- **Remote Commands**: 13 GET + 3 SET = 16 total commands
+- **SET Commands Excluded from Remote**: `set_channel_frequencies_vhf` and `set_channel_activation` (as requested)
+- **Mock Responses**: Implemented realistic ACK responses for SET commands
+- **UI Integration**: Frontend properly handles and displays SET vs GET command differences
 
-### 🎯 EVOLUCIÓN ESTRATÉGICA: DE MOCK A RESPUESTAS REALES
+## [3.1.0] - 2025-09-26
 
-#### Real Device Response Collection System
-- ✅ **TCP Response Collector**: `drs_response_collector.py` - Sistema robusto para capturar respuestas auténticas de dispositivos DRS
-- ✅ **Master Device Integration**: 28 respuestas reales capturadas desde dispositivo físico (192.168.11.22)
-- ✅ **Remote Device Simulation**: 28 respuestas simuladas basadas en patrones Master para dispositivo (192.168.60.160)
-- ✅ **Santone Protocol Authentication**: Verificación completa del protocolo 7E...7E contra hardware físico
-- ✅ **Dual Output Formats**: Soporte JSON y Python para integración flexible
+### Added
+- **Enhanced Logging System**: Implemented detailed logging for commands sent and responses received.
+- **Persistent Result Storage**: Validation results are now saved persistently in `/app/results`.
+- **Results History API**: New endpoint `/api/results/history` to query past validation results.
 
-#### Complete 4-Phase Deployment Implementation
-- ✅ **Phase 1: Real Response Collection** - Sistema de captura TCP completado exitosamente
-- ✅ **Phase 2: API Pydantic Fix** - Corrección completa del error de validación en batch commands
-- ✅ **Phase 3: Frontend Batch Commands** - Interfaz web completa con 28+ comandos DRS
-- ✅ **Phase 4: End-to-End Testing** - 6/6 test suites passed (100% success rate)
+### Fixed
+- **Device Port Correction**: Changed default device port to 65050 for TCP validation.
+- **Container Path Compatibility**: Corrected all hardcoded paths (e.g., `/src/plugins/`) to be compatible with the Docker environment (`/app/plugins/`).
 
-### 🚀 FUNCIONALIDADES DE PRODUCCIÓN COMPLETADAS
+## [3.0.0] - 2025-09-26
 
-### 🎯 EVOLUCIÓN ESTRATÉGICA: DE MOCK A RESPUESTAS REALES
+### Added
+- **Real Device Response Integration**: The system now uses authentic responses captured from a physical DRS Master device (`real_drs_responses_20250926_194004.py`).
+- **"Batch Commands" Web Interface**: A new UI tab for executing and monitoring batch command validation.
+- **SantoneDecoder Integration**: Professional parsing for 5 key commands.
+- **TCP Response Collector**: `drs_response_collector.py` - System for capturing authentic DRS device responses.
 
-#### Real Device Response Collection System
-- ✅ **TCP Response Collector**: `drs_response_collector.py` - Sistema robusto para capturar respuestas auténticas de dispositivos DRS
-- ✅ **Master Device Integration**: 28 respuestas reales capturadas desde dispositivo físico (192.168.11.22)
-- ✅ **Remote Device Simulation**: 28 respuestas simuladas basadas en patrones Master para dispositivo (192.168.60.160)
-- ✅ **Santone Protocol Authentication**: Verificación completa del protocolo 7E...7E contra hardware físico
-- ✅ **Dual Output Formats**: Soporte JSON y Python para integración flexible
+### Fixed
+- **Pydantic Validation Error**: Corrected the `commands_tested` field in the API schema from `int` to `List[str]`.
+- **Ansible Deployment Fixes**: Resolved issues with template paths, port allocation, and removed obsolete configurations like UFW and Fail2ban.
 
-#### Complete 4-Phase Deployment Implementation
-- ✅ **Phase 1: Real Response Collection** - Sistema de captura TCP completado exitosamente
-- ✅ **Phase 2: API Pydantic Fix** - Corrección completa del error de validación en batch commands
-- ✅ **Phase 3: Frontend Batch Commands** - Interfaz web completa con 28+ comandos DRS
-- ✅ **Phase 4: End-to-End Testing** - 6/6 test suites passed (100% success rate)
-
-### 🚀 FUNCIONALIDADES DE PRODUCCIÓN COMPLETADAS
-
-#### Batch Commands Web Interface
-- ✅ **Nueva Tab "Batch Commands"**: Interfaz completa para ejecución masiva de comandos DRS
-- ✅ **Command Selection Grid**: 28+ comandos con soporte Master/Remote y decodificadores
-- ✅ **Real-time Progress Tracking**: Barra de progreso visual con indicadores detallados
-- ✅ **Comprehensive Results Display**: Tabla completa con valores decodificados y respuestas raw
-- ✅ **Responsive Design**: Optimizado para móvil y desktop (44KB de código frontend)
-
-#### API & Backend Enhancements
-- ✅ **Pydantic Validation Fix**: Campo `commands_tested` corregido de `int` a `List[str]`
-- ✅ **Schema Compliance**: Validación completa de modelos Pydantic en endpoints
-- ✅ **28 DRS Commands Support**: Validación completa Master (15) + Remote (13) comandos
-- ✅ **SantoneDecoder Integration**: Parsing profesional con 5 comandos decodificados
-
-#### Testing & Quality Assurance
-- ✅ **Comprehensive Test Suite**: `batch_commands_tester.py` con cobertura 100%
-- ✅ **Automated Report Generation**: Reportes HTML/JSON con métricas detalladas
-- ✅ **End-to-End Validation**: 6/6 test suites passed - sistema production-ready
-- ✅ **Performance Metrics**: Validación de 173ms promedio por comando mock
-
-#### Ansible Deployment Corrections
-- ✅ **Template Path Fixes**: Corrección de rutas Jinja2 en `app-deployment.yml`
-- ✅ **Monitoring Setup**: Actualización de configuración de servicios en MiniPC
-- ✅ **Performance Monitor**: Template corregido para deployment en 192.168.60.140
-- ✅ **Docker Compose Modernization**: Eliminación del campo `version` obsoleto para compatibilidad Docker moderna
-- ✅ **Orphan Container Cleanup**: Agregado flag `--remove-orphans` al comando `docker compose up` para limpieza automática de contenedores huérfanos
-- ✅ **Port Allocation Fix**: Resolución de conflicto de puerto 8080 mediante limpieza de contenedores previos
-- ✅ **Firewall Configuration Removal**: Eliminación completa de configuración UFW ya que no es necesaria
-- ✅ **Simplified Security Setup**: Mantenimiento de hardening SSH y permisos de directorio sin firewall complejo
-- ✅ **Fail2ban Complete Removal**: Eliminación total de configuración fail2ban para simplificar deployment
-
-### 📊 MÉTRICAS DE CALIDAD Y RENDIMIENTO
-
-#### Testing Results Summary
+### Technical Details
+- **Command Coverage**: 28 DRS commands (15 Master + 13 Remote)
 - **Test Success Rate**: 100% (6/6 test suites passed)
-- **Command Coverage**: 28/28 comandos DRS validados
-- **Decoder Integration**: 5/5 comandos con SantoneDecoder
-- **File Integrity**: HTML (11,335 bytes) + JS (20,501 bytes) + CSS (12,088 bytes)
-- **API Endpoints**: 3/3 endpoints funcionales con validación Pydantic
+- **Real Device Integration**: 28 authentic responses captured from physical hardware
 
-#### Production Readiness Metrics
-- **Deployment Phases**: 4/4 completadas exitosamente
-- **Real Device Integration**: 28 respuestas auténticas + 28 simuladas
-- **Frontend Features**: 6 componentes principales implementados
-- **Documentation Coverage**: 100% actualizada con cambios
+## [2.0.0] - 2025-09-25
 
-### 🏆 ACHIEVEMENTS UNLOCKED
+### Added
+- **Ansible Deployment Automation**: Complete migration to Ansible for automated, one-command deployment (`ansible-playbook site.yml`).
+- **Repository Reorganization**: Structured the project with `docs/`, `scripts/`, and `ansible/` folders for better organization.
 
-#### Strategic Evolution Completed
-- ✅ **Mock-to-Real Transition**: Sistema evolucionado de respuestas simuladas a datos auténticos
-- ✅ **Production-Ready Framework**: Framework completo listo para deployment en MiniPC
-- ✅ **Field Technician Tools**: Herramientas completas para validación de dispositivos DRS
-- ✅ **Santone Protocol Mastery**: Validación completa del protocolo contra hardware físico
+### Removed
+- **Obsolete Deployment Scripts**: Removed old bash scripts (`install_minipc.sh`, `deploy_minipc.sh`, etc.) now replaced by Ansible.
 
-#### Technical Excellence Achieved
-- ✅ **100% Test Coverage**: Validación completa de todos los componentes
-- ✅ **Zero Breaking Changes**: Compatibilidad backwards mantenida
-- ✅ **Mobile-First Design**: Interfaz responsive optimizada para campo
-- ✅ **Enterprise-Grade Quality**: Testing automatizado y documentación completa
+## [1.0.0] - 2025-09-24
 
----
+### Added
+- **Initial Release**: First functional version of the DRS Validation Framework.
+- **Core Validation Engine**: `TechnicianTCPValidator` with mock and live modes.
+- **FastAPI Backend**: Full API with endpoints for scenarios, validation runs, and health checks.
+- **Web Interface**: Initial UI with tabs for configuration and validation.
+- **Docker Infrastructure**: `Dockerfile` and `docker-compose.yml` for easy setup.
+- **Configuration System**: YAML-based scenarios in `config/validation_scenarios.yaml`.
+- **Automated Test Suite**: PowerShell script (`test_framework.ps1`) for end-to-end testing.
 
-## [v2.0.0] - 2025-09-25 - ANSIBLE DEPLOYMENT ✅
-
-### 🚀 MIGRACIÓN COMPLETA A ANSIBLE
-
-#### Nuevos Componentes de Deployment
-
-**Ansible Infrastructure**
-- ✅ `ansible/` - Estructura completa de Ansible
-  - `inventory/hosts.yml` - Configuración para MiniPC (192.168.60.140)
-  - `playbooks/site.yml` - Playbook principal de deployment
-  - `tasks/` - Tareas modulares (system, docker, app, monitoring, security)
-  - `templates/` - Templates Jinja2 para configuración
-  - `ansible.cfg` - Configuración optimizada
-
-**Automation Features**
-- ✅ System preparation automática
-- ✅ Docker installation y configuración
-- ✅ Application deployment con Docker Compose
-- ✅ Monitoring y backup automáticos
-- ✅ Security hardening (firewall, SSH, permissions)
-- ✅ Health checks y performance monitoring
-- ✅ Management commands (`drs status`, `drs health`, etc.)
-
-#### Repository Reorganization
-- ✅ Documentación reorganizada en `docs/` 
-  - `docs/technical/` - Manuales técnicos
-  - `docs/business/` - Análisis de negocio  
-  - `docs/deployment/` - Guías de deployment
-- ✅ Scripts útiles movidos a `scripts/`
-- ✅ Eliminación de scripts bash obsoletos
-- ✅ Estructura limpia y profesional
-
-#### Deployment Capabilities
-- 🎯 **Target**: MiniPC Raspberry Pi en 192.168.60.140
-- ⚡ **One-command deployment**: `ansible-playbook site.yml`
-- 🔒 **Security**: Firewall, SSH hardening, audit logging
-- 📊 **Monitoring**: Health checks cada 5min, performance cada 10min
-- 💾 **Backup**: Automático diario a las 2:00 AM
-- 🛠️ **Management**: Comandos simplificados para operación
-
-### 🗑️ Removed Components
-- ❌ `install_minipc.sh`, `deploy_minipc.sh`, `configure_minipc.sh`
-- ❌ `transfer_to_minipc.sh`, `start.sh`, `start.bat`
-- ❌ `Dockerfile.minipc` - Consolidado en Dockerfile principal
-
----
-
-## [v1.0.0] - 2025-09-24 - IMPLEMENTACIÓN COMPLETA ✅
-
-### 🎉 FRAMEWORK 100% FUNCIONAL
-
-#### Componentes Principales Implementados
-
-**Core Validation Engine**
-- ✅ `validation/tcp_validator.py` - Lógica completa de validación
-  - Clase `TechnicianTCPValidator` con métodos mock y live
-  - Soporte completo para DMU, DRU y Discovery devices
-  - Validaciones TCP, ping tests, threshold checks
-  - Manejo robusto de errores y timeouts
-  - Integración con tests existentes del proyecto
-
-**API FastAPI - Todos los Endpoints**
-- ✅ `/health` - Sistema health check
-- ✅ `/api/validation/scenarios` - Lista escenarios disponibles
-- ✅ `/api/validation/run` - Ejecución validaciones (mock/live modes)
-- ✅ `/api/validation/ping/{ip}` - Tests de conectividad
-- ✅ `/docs` - Documentación automática OpenAPI
-
-**Web Interface**
-- ✅ `web/index.html` - Interfaz completa para técnicos
-- ✅ `web/style.css` - Diseño responsive y profesional
-- ✅ `web/app.js` - JavaScript para interacción en tiempo real
-- ✅ Tabs dinámicos: Configuration, Validation, Monitor
-- ✅ Formularios intuitivos para configuración de validaciones
-
-**Docker Infrastructure**
-- ✅ `docker-compose.yml` - Orquestación completa
-- ✅ `Dockerfile` - Imagen optimizada Python 3.11
-- ✅ Networking configurado para acceso localhost:8080
-- ✅ Volúmenes para persistencia de logs y resultados
-
-**Configuration System**
-- ✅ `config/validation_scenarios.yaml` - Escenarios predefinidos
-- ✅ Device types: DMU Ethernet, DRU Remote, Discovery
-- ✅ Configuraciones de thresholds por tipo de dispositivo
-- ✅ Modos mock y live configurables
-
-### Funcionalidades Clave
-
-#### Validation Modes
-1. **Mock Mode**: Simulación completa para desarrollo/testing
-   - Respuestas simuladas sin conexión real
-   - Tests de conectividad simulados
-   - Ideal para desarrollo y demo
-
-2. **Live Mode**: Validación real de dispositivos
-   - Conexiones TCP reales a dispositivos
-   - Tests de ping y conectividad de red
-   - Validación de thresholds en tiempo real
-
-#### Device Support
-- **DMU Ethernet**: Validación comunicación básica
-- **DRU Remote**: Validación dispositivos remotos
-- **Discovery**: Auto-discovery de dispositivos
-
-#### Integration Features
-- Sistema de fallback si importaciones fallan
-- Compatible con tests existentes del proyecto
-- Reutiliza lógica de `test_tcp_transceiver.py`
-- Integración con `test_check_eth_integration.py`
-
-### Testing & Validation
-
-**Suite de Pruebas Automatizada**
-- ✅ `test_framework.ps1` - Suite completa de testing
-- ✅ Health check validation
-- ✅ API endpoints testing
-- ✅ Mock validation testing  
-- ✅ Live validation testing
-- ✅ Ping functionality testing
-- ✅ **Resultado: 100% success rate**
-
-### Deployment Ready
-
-**Production Environment**
-- Docker container estable y optimizado
-- URL accesible: http://localhost:8080
-- API documentation: http://localhost:8080/docs
-- Logs centralizados con `docker-compose logs`
-- Scripts de inicio automático para técnicos
-
-### Technical Architecture
-
-```
-validation-framework/
-├── validation_app.py           # FastAPI main application
-├── validation/
-│   └── tcp_validator.py        # Core validation logic
-├── web/                        # Frontend interface
-│   ├── index.html
-│   ├── style.css
-│   └── app.js
-├── config/
-│   └── validation_scenarios.yaml
-├── docker-compose.yml
-├── Dockerfile
-└── tests/
-    └── test_framework.ps1
-```
-
-### Next Phase Ready
-
-El framework está completamente implementado y listo para:
-- ✅ Uso en producción por técnicos
-- ✅ Extensión con nuevos device types
-- ✅ Personalización de scenarios
-- ✅ Integración con sistemas de monitoreo
-- ✅ Deployment en miniPCs de campo
-
----
-
-**Status**: COMPLETO - Framework 100% funcional
-**Implementado por**: GitHub Copilot Assistant
-**Fecha**: 24 de septiembre de 2025
-**Tests**: ✅ Todos exitosos (100% success rate)
+### Technical Stack
+- **Backend**: FastAPI, Python 3.11
+- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
+- **Container**: Docker with development and production configs
+- **Protocol**: Santone DRS protocol implementation
+- **Testing**: pytest with asyncio support
