@@ -262,6 +262,8 @@ class SupportedCommandsResponse(BaseModel):
     master_commands: List[str]
     remote_commands: List[str]
     set_commands: List[str] = []
+    total_commands: Optional[int] = None
+    decoder_mappings: Optional[Dict[str, bool]] = None
 
 
 def save_validation_result(result: Dict[str, Any], request: ValidationRequest) -> str:
@@ -484,6 +486,15 @@ async def get_validation_scenarios():
                 "device_type": "drs_remote",
                 "default_ip": "192.168.11.22",
                 "default_hostname": "drs-device"
+            },
+            {
+                "id": "drs_master_batch",
+                "name": "DRS Master Batch Commands",
+                "description": "Executes batch validation of all master DRS commands",
+                "enabled": True,
+                "device_type": "drs_master",
+                "default_ip": "192.168.11.22",
+                "default_hostname": "drs-master"
             }
         ]
     }
@@ -528,7 +539,8 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
         device_type_mapping = {
             "dru_remote_check": "dru_ethernet", 
             "device_discovery": "discovery_ethernet",
-            "batch_remote_commands": "drs_remote"
+            "batch_remote_commands": "drs_remote",
+            "drs_master_batch": "drs_master"
         }
         
         # Build validation config
@@ -611,6 +623,76 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
                     "tests": [
                         {
                             "name": "Batch Remote Commands",
+                            "status": "FAIL",
+                            "message": "Batch commands validator not available",
+                            "details": "Required dependencies not installed"
+                        }
+                    ],
+                    "duration_ms": 0,
+                    "timestamp": datetime.now().isoformat()
+                }
+        elif scenario_id == "drs_master_batch":
+            # Special handling for DRS master batch commands scenario
+            if BATCH_VALIDATION_AVAILABLE:
+                try:
+                    validator = BatchCommandsValidator()
+                    batch_result = validator.validate_batch_commands(
+                        ip_address=validation_config["ip_address"],
+                        command_type=CommandType.MASTER,
+                        mode=validation_config["mode"],
+                        selected_commands=None  # None means all master commands
+                    )
+                    
+                    # Convert batch result to standard validation format
+                    # Ensure status values are strings
+                    results_list = batch_result["results"]
+                    for cmd in results_list:
+                        if hasattr(cmd["status"], 'value'):
+                            cmd["status"] = cmd["status"].value
+                    
+                    result = {
+                        "overall_status": batch_result["overall_status"],  # Use batch validator's overall status (80% threshold)
+                        "message": f"DRS Master batch commands validation completed. {len([c for c in results_list if c['status'] == 'PASS'])}/{len(results_list)} commands passed.",
+                        "mode": validation_config["mode"],
+                        "tests": [
+                            {
+                                "name": f"Master Command: {cmd['command']}",
+                                "status": cmd["status"],
+                                "message": cmd.get("message", "Command executed"),
+                                "details": f"Response: {cmd.get('response_data', 'N/A')}",
+                                "duration_ms": cmd.get("duration_ms", 0)
+                            }
+                            for cmd in results_list
+                        ],
+                        "duration_ms": batch_result.get("duration_ms", 0),
+                        "timestamp": datetime.now().isoformat(),
+                        "command_type": "master",
+                        "total_commands": len(results_list)
+                    }
+                except Exception as e:
+                    result = {
+                        "overall_status": "FAIL",
+                        "message": f"DRS Master batch commands validation failed: {str(e)}",
+                        "mode": validation_config["mode"],
+                        "tests": [
+                            {
+                                "name": "DRS Master Batch Commands",
+                                "status": "FAIL",
+                                "message": f"Validation error: {str(e)}",
+                                "details": "Failed to execute master commands batch"
+                            }
+                        ],
+                        "duration_ms": 0,
+                        "timestamp": datetime.now().isoformat()
+                    }
+            else:
+                result = {
+                    "overall_status": "FAIL",
+                    "message": "Batch commands validator not available",
+                    "mode": validation_config["mode"],
+                    "tests": [
+                        {
+                            "name": "DRS Master Batch Commands",
                             "status": "FAIL",
                             "message": "Batch commands validator not available",
                             "details": "Required dependencies not installed"
