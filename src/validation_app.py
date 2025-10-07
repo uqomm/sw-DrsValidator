@@ -167,8 +167,8 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "web/static"), name="static")
 templates = Jinja2Templates(directory=Path(__file__).parent / "web/templates")
 
-# Results storage directory - use relative path for development
-PROJECT_ROOT = Path(__file__).parent.parent
+# Results storage directory - use absolute path for container
+PROJECT_ROOT = Path("/app")  # Fixed path for container environment
 RESULTS_DIR = PROJECT_ROOT / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
@@ -178,6 +178,7 @@ class DeviceConfig(BaseModel):
     ip_address: str
     device_type: str
     device_name: str
+    serial_number: Optional[str] = None  # Número de serie del dispositivo
     optical_port: Optional[int] = 1
     command: Optional[int] = None
 
@@ -268,6 +269,7 @@ def save_validation_result(result: Dict[str, Any], request: ValidationRequest) -
                 "ip_address": request.device_config.ip_address,
                 "device_type": request.device_config.device_type,
                 "hostname": request.device_config.device_name,
+                "serial_number": request.device_config.serial_number,
                 "live_mode": request.mode == "live"
             },
             "result": result
@@ -391,79 +393,131 @@ async def run_validation_with_logging(client_id: str, request_data: Dict[str, An
     """Execute validation with detailed real-time logging"""
     print(f"DEBUG: run_validation_with_logging called with client_id: {client_id}")
     
-    # Esperar a que el WebSocket se conecte
+    # Esperar a que el WebSocket se conecte (opcional para logging en tiempo real)
     max_wait = 2  # segundos máximo de espera
     waited = 0
+    websocket_available = False
+    
     while client_id not in manager.active_connections and waited < max_wait:
         print(f"DEBUG: Waiting for WebSocket connection... ({waited}s)")
         await asyncio.sleep(1)
         waited += 1
     
-    if client_id not in manager.active_connections:
-        print(f"DEBUG: WebSocket never connected for client {client_id}")
-        return
+    if client_id in manager.active_connections:
+        websocket_available = True
+        print(f"DEBUG: WebSocket connected for client {client_id}")
+    else:
+        print(f"DEBUG: No WebSocket connection for client {client_id}, proceeding without real-time logging")
     
     try:
-        print(f"DEBUG: Sending initial log for client {client_id}")
-        await manager.send_log(client_id, "[DEBUG] 🚀 Starting validation function")
+        if websocket_available:
+            await manager.send_log(client_id, "[DEBUG] 🚀 Starting validation function")
         
-        device_config = request_data.get("device_config", {})
+        device_config = request_data  # Use request_data directly as device_config
         ip_address = device_config.get("ip_address", "N/A")
-        device_type = device_config.get("device_type", "Unknown")
+        command_type_str = device_config.get("command_type", "remote")  # Use command_type as device_type
         mode = request_data.get("mode", "mock")
         
-        await manager.send_log(client_id, f"[INFO] 🚀 Iniciando validación {device_type} en {ip_address} (modo: {mode})")
+        log_message = f"[INFO] 🚀 Iniciando validación {command_type_str} en {ip_address} (modo: {mode})"
+        if websocket_available:
+            await manager.send_log(client_id, log_message)
+        print(log_message)
         
-        # Crear callback de logging para WebSocket
-        async def websocket_log_callback(message: str):
-            await manager.send_log(client_id, message)
+        # Crear callback de logging que funcione con o sin WebSocket
+        async def log_callback(message: str):
+            if websocket_available:
+                await manager.send_log(client_id, message)
+            else:
+                print(message)  # Fallback to console logging
         
         # Crear instancia del validador con callback de logging
-        validator = BatchCommandsValidator(log_callback=websocket_log_callback)
+        validator = BatchCommandsValidator(log_callback=log_callback)
         
-        # Determinar el tipo de comando basado en el device_type
-        device_type = device_config.get("device_type", "remote").lower()
-        if device_type == "master":
+        # Determinar el tipo de comando basado en el command_type_str
+        if command_type_str == "master":
             command_type = CommandType.MASTER
-        elif device_type == "set":
+        elif command_type_str == "set":
             command_type = CommandType.SET
         else:
             command_type = CommandType.REMOTE  # default
         
-        # Ejecutar validación en un thread separado para no bloquear el event loop
-        result = await asyncio.to_thread(
-            validator.validate_batch_commands,
+        # Ejecutar validación de forma asíncrona con logs en tiempo real
+        result = await validator.validate_batch_commands_async(
             ip_address=ip_address,
             command_type=command_type,
             mode=mode,
             selected_commands=None  # None means all commands
         )
         
+        # Save the validation result to persistent storage
+        try:
+            # Create ValidationRequest object from request_data
+            device_config_obj = DeviceConfig(
+                ip_address=request_data.get("ip_address", "N/A"),
+                device_type=request_data.get("command_type", "remote"),  # Use command_type as device_type
+                device_name=request_data.get("scenario_id", "Unknown"),
+                serial_number=request_data.get("serial_number", "N/A"),
+                optical_port=request_data.get("port", 1)
+            )
+            thresholds_obj = ValidationThresholds(
+                ping_timeout_ms=5000,
+                tcp_timeout_ms=10000,
+                max_retries=3
+            )
+            validation_request = ValidationRequest(
+                mode=mode,
+                device_config=device_config_obj,
+                thresholds=thresholds_obj
+            )
+            
+            saved_path = save_validation_result(result, validation_request)
+            if saved_path:
+                await log_callback(f"[INFO] 💾 Resultado guardado: {saved_path}")
+                logging.info(f"✅ Validation result saved to {saved_path}")
+            else:
+                await log_callback("[WARNING] ⚠️ No se pudo guardar el resultado")
+                logging.warning("Failed to save validation result")
+        except Exception as save_error:
+            await log_callback(f"[ERROR] ❌ Error guardando resultado: {str(save_error)}")
+            logging.error(f"Error saving validation result: {save_error}")
+        
         # Actualizar estado de la tarea
         overall_status = result.get("overall_status", "FAIL")
         stats = result.get("statistics", {})
         
         if overall_status == "PASS":
-            await manager.send_log(client_id, f"[SUCCESS] ✅ Validación completada: {stats.get('passed', 0)}/{stats.get('total_commands', 0)} comandos exitosos")
+            success_msg = f"[SUCCESS] ✅ Validación completada: {stats.get('passed', 0)}/{stats.get('total_commands', 0)} comandos exitosos"
+            await log_callback(success_msg)
             active_tasks[client_id] = {
                 "status": "PASS",
                 "message": "Validación completada exitosamente",
                 "details": result
             }
         else:
-            await manager.send_log(client_id, f"[ERROR] ❌ Validación fallida: {stats.get('failed', 0)} comandos fallidos")
+            error_msg = f"[ERROR] ❌ Validación fallida: {stats.get('failed', 0)} comandos fallidos"
+            await log_callback(error_msg)
             active_tasks[client_id] = {
                 "status": "FAIL",
                 "message": f"Validación fallida: {stats.get('failed', 0)} errores",
                 "details": result
             }
         
+        # Send validation_complete message via WebSocket if available
+        if websocket_available:
+            completion_message = json.dumps({
+                "type": "validation_complete",
+                "result": result,
+                "client_id": client_id
+            })
+            await manager.send_log(client_id, completion_message)
+        
     except Exception as e:
         error_msg = f"[ERROR] ❌ Error durante validación: {str(e)}"
-        await manager.send_log(client_id, error_msg)
+        await log_callback(error_msg)
         active_tasks[client_id] = {"status": "ERROR", "message": str(e)}
     finally:
-        await manager.send_log(client_id, "---END_OF_LOG---")
+        if websocket_available:
+            await manager.send_log(client_id, "---END_OF_LOG---")
 
 
 # API Routes
@@ -525,30 +579,28 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
         request_mode = request.get("mode", "mock")
         simulation_mode = request_mode.lower() == "mock"
         
-        if simulation_mode:
-            # Return simulated validation results immediately
-            return await generate_simulated_validation_results(request)
-        
         # Check if request wants WebSocket logging (new functionality)
         use_websockets = request.get("use_websockets", True)  # Default to new behavior
         
         if use_websockets:
-            # New WebSocket-based approach
+            # WebSocket-based approach - works for both mock and live mode
             client_id = request.get("client_id", str(uuid.uuid4()))
             print(f"DEBUG: Starting WebSocket validation for client_id: {client_id}")
             active_tasks[client_id] = {"status": "STARTING", "message": "Iniciando validación..."}
             
-            # Ejecutar la validación directamente en lugar de usar background tasks
-            print(f"DEBUG: Running validation synchronously")
-            await run_validation_with_logging(client_id, request)
-            print(f"DEBUG: Validation completed")
+            # Ejecutar la validación en background para no bloquear la respuesta HTTP
+            background_tasks.add_task(run_validation_with_logging, client_id, request)
             
             return JSONResponse({
-                "status": "completed",
+                "status": "started",
                 "client_id": client_id,
-                "message": "Validación completada.",
+                "message": "Validación iniciada. Conéctate al WebSocket para logs en tiempo real.",
                 "websocket_url": f"/ws/logs/{client_id}"
             })
+        
+        if simulation_mode:
+            # Fallback: Return simulated validation results immediately
+            return await generate_simulated_validation_results(request)
         
         # Legacy approach (original logic) - keep for compatibility
         # Validate required fields
@@ -1103,6 +1155,133 @@ async def get_results_history(limit: int = 50) -> Dict[str, Any]:
             "message": f"Failed to get results history: {str(e)}",
             "results": []
         }
+
+
+@app.get("/api/results/{filename}")
+async def get_result_file(filename: str):
+    """Get a specific result file by filename"""
+    try:
+        filepath = RESULTS_DIR / filename
+        
+        if not filepath.exists():
+            raise HTTPException(status_code=404, detail=f"Result file not found: {filename}")
+        
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        return JSONResponse(content=data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error reading result file {filename}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error reading result file: {str(e)}")
+
+
+@app.get("/api/results/{filename}/download")
+async def download_result_file(filename: str):
+    """Download a specific result file"""
+    try:
+        filepath = RESULTS_DIR / filename
+        
+        if not filepath.exists():
+            raise HTTPException(status_code=404, detail=f"Result file not found: {filename}")
+        
+        from fastapi.responses import FileResponse
+        return FileResponse(
+            path=filepath,
+            filename=filename,
+            media_type='application/json'
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error downloading result file {filename}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error downloading result file: {str(e)}")
+
+
+@app.get("/api/results/export/csv")
+async def export_results_to_csv():
+    """Export all validation results to a CSV file"""
+    try:
+        import csv
+        import io
+        from fastapi.responses import StreamingResponse
+        
+        # Get all result files
+        result_files = sorted(
+            RESULTS_DIR.glob("*.json"),
+            key=lambda x: x.stat().st_mtime,
+            reverse=True
+        )
+        
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow([
+            'Timestamp',
+            'IP Address',
+            'Device Type',
+            'Serial Number',
+            'Scenario',
+            'Mode',
+            'Overall Status',
+            'Total Commands',
+            'Passed',
+            'Failed',
+            'Timeouts',
+            'Success Rate (%)',
+            'Duration (ms)',
+            'Average Duration (ms)'
+        ])
+        
+        # Write data rows
+        for filepath in result_files:
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    
+                request = data.get('request', {})
+                result = data.get('result', {})
+                stats = result.get('statistics', {})
+                
+                writer.writerow([
+                    data.get('timestamp', 'N/A'),
+                    request.get('ip_address', 'N/A'),
+                    request.get('device_type', 'N/A'),
+                    request.get('serial_number', 'N/A'),
+                    request.get('hostname', 'N/A'),
+                    'Live' if request.get('live_mode') else 'Mock',
+                    result.get('overall_status', 'N/A'),
+                    stats.get('total_commands', 0),
+                    stats.get('passed', 0),
+                    stats.get('failed', 0),
+                    stats.get('timeouts', 0),
+                    stats.get('success_rate', 0),
+                    result.get('duration_ms', 0),
+                    stats.get('average_duration_ms', 0)
+                ])
+            except Exception as e:
+                logging.warning(f"Error reading result file {filepath}: {e}")
+                continue
+        
+        # Prepare response
+        output.seek(0)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"drs_validation_results_{timestamp}.csv"
+        
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        logging.error(f"Error exporting results to CSV: {e}")
+        raise HTTPException(status_code=500, detail=f"Error exporting results: {str(e)}")
 
 
 # Error handlers

@@ -155,7 +155,7 @@ class BatchCommandsValidator:
         selected_commands: List[str] = None
     ) -> Dict[str, Any]:
         """
-        Valida un batch de comandos DRS.
+        Valida un batch de comandos DRS (versión síncrona).
         
         Args:
             ip_address: IP del dispositivo DRS
@@ -176,9 +176,67 @@ class BatchCommandsValidator:
         
         # Ejecutar tests según el modo
         if mode.lower() == "mock":
+            # ALWAYS use sync version - async will be called from validate_batch_commands_async
             results = self._execute_mock_batch(commands, command_type)
         else:
             results = self._execute_live_batch(ip_address, commands, command_type)
+        
+        # Calcular estadísticas
+        total_duration = int((time.time() - start_time) * 1000)
+        stats = self._calculate_batch_statistics(results)
+        
+        return {
+            "overall_status": self._determine_overall_status(results),
+            "command_type": command_type.value,
+            "mode": mode,
+            "ip_address": ip_address,
+            "total_commands": len(commands),
+            "commands_tested": [result.command for result in results],
+            "statistics": stats,
+            "results": [result.to_dict() for result in results],
+            "duration_ms": total_duration,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+    
+    async def validate_batch_commands_async(
+        self, 
+        ip_address: str,
+        command_type: CommandType,
+        mode: str = "mock",
+        selected_commands: List[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Valida un batch de comandos DRS (versión asíncrona con logs en tiempo real).
+        
+        Args:
+            ip_address: IP del dispositivo DRS
+            command_type: Tipo de comandos (MASTER o REMOTE)
+            mode: Modo de validación ("mock" o "live")  
+            selected_commands: Lista específica de comandos (None = todos)
+            
+        Returns:
+            Diccionario con resultados de validación batch
+        """
+        start_time = time.time()
+        
+        # Obtener lista de comandos a probar
+        if selected_commands:
+            commands = selected_commands
+        else:
+            commands = self._get_commands_for_type(command_type)
+        
+        # Ejecutar tests según el modo
+        if mode.lower() == "mock":
+            results = await self._execute_mock_batch_async(commands, command_type)
+        else:
+            # For live mode, run in thread pool to avoid blocking
+            import asyncio
+            results = await asyncio.to_thread(
+                self._execute_live_batch, 
+                ip_address, 
+                commands, 
+                command_type
+            )
         
         # Calcular estadísticas
         total_duration = int((time.time() - start_time) * 1000)
@@ -229,6 +287,83 @@ class BatchCommandsValidator:
             
         return commands
     
+    async def _execute_mock_batch_async(self, commands: Dict[str, str], command_type: CommandType) -> List[CommandTestResult]:
+        """
+        Versión asíncrona de _execute_mock_batch para enviar logs en tiempo real.
+        """
+        from .real_drs_responses_20250926_194004 import REAL_DRS_RESPONSES as MASTER_RESPONSES
+        from .real_drs_remote_responses import REAL_DRS_RESPONSES as REMOTE_RESPONSES
+        from .set_command_responses import get_master_set_mock_response, get_remote_set_mock_response
+        from .hex_frames import get_master_set_command_frame, get_remote_set_command_frame
+        
+        results = []
+        
+        # Log inicial
+        await self._log(f"🎮 Modo MOCK: Simulando {len(commands)} comandos {command_type.value}")
+        
+        for i, (cmd_name, hex_frame) in enumerate(commands.items(), 1):
+            start_time = time.time()
+            
+            # Log del comando siendo ejecutado
+            await self._log(f"📤 [{i}/{len(commands)}] Comando: {cmd_name}")
+            await self._log(f"    📋 Trama enviada: {hex_frame}")
+            
+            # Simular duración realista (50-200ms)
+            import random
+            import asyncio
+            await asyncio.sleep(random.uniform(0.05, 0.2))
+            
+            duration = int((time.time() - start_time) * 1000)
+            
+            # Determinar si es comando GET o SET
+            is_set_command = cmd_name.startswith('set_') or cmd_name.startswith('remote_set_')
+            
+            # Obtener respuesta mock según tipo de comando
+            if is_set_command:
+                if command_type == CommandType.MASTER:
+                    mock_response = get_master_set_mock_response(cmd_name)
+                else:
+                    mock_response = get_remote_set_mock_response(cmd_name)
+                mock_decoded = {}  # Comandos SET no tienen valores decodificados
+                await self._log(f"    ⚙️ Comando SET - Configuración aplicada")
+            else:
+                # Comandos GET (lógica existente)
+                if command_type == CommandType.MASTER:
+                    mock_response = MASTER_RESPONSES.get(cmd_name, "")
+                else:
+                    mock_response = REMOTE_RESPONSES.get(cmd_name, "")
+                mock_decoded = self._generate_mock_decoded_values(cmd_name)
+                
+                # Log de respuesta
+                if mock_response:
+                    await self._log(f"    📥 Respuesta: {mock_response}")
+                    if mock_decoded:
+                        for key, value in mock_decoded.items():
+                            if key not in ['status', 'mock_source', 'raw_bytes', 'decoder_mapping']:
+                                await self._log(f"       🔍 {key}: {value}")
+            
+            # Log del resultado
+            if mock_response:
+                await self._log(f"    ✅ EXITOSO ({duration}ms)")
+            else:
+                await self._log(f"    ❌ FALLIDO - No mock response")
+            
+            # Crear resultado
+            result = CommandTestResult(
+                command=cmd_name,
+                command_type=command_type,
+                status=ValidationResult.PASS if mock_response else ValidationResult.FAIL,
+                message=f"✅ Mock validation successful for {cmd_name}" if mock_response else f"❌ No mock response for {cmd_name}",
+                details=f"Trama enviada: {hex_frame}",
+                response_data=mock_response,
+                decoded_values=mock_decoded,
+                duration_ms=duration
+            )
+            
+            results.append(result)
+        
+        return results
+    
     def _execute_mock_batch(self, commands: Dict[str, str], command_type: CommandType) -> List[CommandTestResult]:
         """
         Ejecuta validación batch en modo mock (simulado).
@@ -243,8 +378,15 @@ class BatchCommandsValidator:
         
         results = []
         
-        for cmd_name, hex_frame in commands.items():
+        # Log inicial
+        self._log_sync(f"🎮 Modo MOCK: Simulando {len(commands)} comandos {command_type.value}")
+        
+        for i, (cmd_name, hex_frame) in enumerate(commands.items(), 1):
             start_time = time.time()
+            
+            # Log del comando siendo ejecutado
+            self._log_sync(f"📤 [{i}/{len(commands)}] Comando: {cmd_name}")
+            self._log_sync(f"    📋 Trama enviada: {hex_frame}")
             
             # Simular duración realista (50-200ms)
             import random
@@ -262,6 +404,7 @@ class BatchCommandsValidator:
                 else:
                     mock_response = get_remote_set_mock_response(cmd_name)
                 mock_decoded = {}  # Comandos SET no tienen valores decodificados
+                self._log_sync(f"    ⚙️ Comando SET - Configuración aplicada")
             else:
                 # Comandos GET (lógica existente)
                 if command_type == CommandType.MASTER:
@@ -269,6 +412,20 @@ class BatchCommandsValidator:
                 else:
                     mock_response = REMOTE_RESPONSES.get(cmd_name, "")
                 mock_decoded = self._generate_mock_decoded_values(cmd_name)
+                
+                # Log de respuesta
+                if mock_response:
+                    self._log_sync(f"    📥 Respuesta: {mock_response}")
+                    if mock_decoded:
+                        for key, value in mock_decoded.items():
+                            if key not in ['status', 'mock_source', 'raw_bytes', 'decoder_mapping']:
+                                self._log_sync(f"       🔍 {key}: {value}")
+            
+            # Log del resultado
+            if mock_response:
+                self._log_sync(f"    ✅ EXITOSO ({duration}ms)")
+            else:
+                self._log_sync(f"    ❌ FALLIDO - No mock response")
             
             # Crear resultado
             result = CommandTestResult(
