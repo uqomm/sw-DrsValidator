@@ -16,3 +16,6 @@ structlog==23.2.0
 # Utilidades
 python-dotenv==1.0.0
 aiofiles==23.2.1
+
+# CRC calculation for DRS protocol
+crccheck==1.3.0
