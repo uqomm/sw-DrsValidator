@@ -5,6 +5,77 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2025-10-07
+
+### Added
+- **Real-Time Detailed Logging**: Validation now shows comprehensive command execution details:
+  - 📤 Command name and index (e.g., `[1/13] Comando: remote_read_band`)
+  - 📋 Hex frames sent to device
+  - 📥 Hex response frames received
+  - 🔍 Decoded parameter values (frequency, power, etc.)
+  - ✅ Individual command status and duration
+- **CSV Export Functionality**: New endpoint `/api/results/export/csv` for exporting all validation results to CSV format
+  - Includes: Timestamp, IP Address, Device Type, Serial Number, Scenario, Mode, Status, Commands, Success Rate, Duration
+  - Automatic download with timestamped filename
+  - Export button in Results tab
+- **Device Serial Number Tracking**: Added serial number field to device configuration
+  - Optional field in validation form with barcode icon
+  - Included in saved results (JSON)
+  - Displayed in results table as badge
+  - Shown in result detail modal
+  - Exported in CSV reports
+- **Async Batch Validation**: Complete rewrite of validation execution for real-time WebSocket logging
+  - New `validate_batch_commands_async()` method for non-blocking execution
+  - Direct async execution instead of `asyncio.to_thread()`
+  - Proper async/await pattern for WebSocket message streaming
+  - Eliminates event loop conflicts
+
+### Changed
+- **UI Simplification**: Cleaned up interface to only show functional features
+  - Removed "Comandos Batch" tab (unused)
+  - Removed "Monitoreo" tab (fake data)
+  - Removed "Ayuda" tab (no useful content)
+  - Removed "Sistema Activo" static indicator from topbar
+  - Final menu: **Validación** and **Resultados** only
+- **Results Table Enhancement**: Added "Serial" column to results history table
+  - Displays serial numbers as Bootstrap badges
+  - Updated colspan from 6 to 7 for empty state
+- **Keyboard Shortcuts Update**:
+  - `Ctrl+1`: Validación
+  - `Ctrl+2`: Resultados
+  - `Ctrl+B`: Toggle Sidebar
+  - Removed `Ctrl+3` (Help tab eliminated)
+
+### Fixed
+- **WebSocket Logging Issues**: Resolved async callback problems that prevented detailed logs from appearing
+  - Fixed `asyncio.run()` creating conflicting event loops
+  - Removed thread-based execution that broke async callbacks
+  - Logs now properly stream via WebSocket to frontend
+- **CSV Export Implementation**: Connected export button to backend endpoint
+  - Added missing event listener for `exportResultsBtn`
+  - Proper `StreamingResponse` handling with blob download
+  - Filename extraction from `Content-Disposition` header
+- **DeviceConfig Model**: Added `serial_number: Optional[str]` field to Pydantic model
+- **Result Persistence**: Updated `save_validation_result()` to include serial number in saved JSON
+
+### Technical Details
+- **Logging Architecture**: Dual logging methods
+  - `async def _log()`: For async contexts with WebSocket streaming
+  - `def _log_sync()`: For sync contexts (fallback)
+- **Validation Execution**: Two entry points
+  - `validate_batch_commands()`: Sync version (no WebSocket)
+  - `validate_batch_commands_async()`: Async version with real-time logs
+- **CSV Generation**: In-memory CSV writer with `io.StringIO` for efficient streaming
+- **Frontend**: Bootstrap 5 modals, WebSocket message parsing, async result loading
+- **Docker**: Volume mount `/app/results` for persistent result storage
+
+### Removed
+- Batch commands upload functionality (`uploadBatchFile()`)
+- Monitoring tab with fake CPU/Memory/Network stats
+- Help tab with basic user guide
+- Static "Sistema Activo" status indicator
+- All references to removed tabs in breadcrumb and keyboard shortcuts
+
 ## [3.2.0] - 2025-10-07
 
 ### Added
