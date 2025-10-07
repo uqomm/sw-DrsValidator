@@ -13,7 +13,7 @@ set -e  # Exit on error
 REMOTE_HOST="${1:-192.168.60.140}"
 DRS_PORT="${2:-8089}"
 SSH_PASSWORD="${3}"
-REMOTE_USER="root"
+REMOTE_USER="sigmadev"
 REMOTE_DIR="/opt/drs-validation"
 REPO_URL="https://github.com/arturoSigmadev/sw-DrsValidator.git"
 BRANCH="feature/ui-fixes-final"

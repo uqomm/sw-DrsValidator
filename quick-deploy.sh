@@ -9,7 +9,7 @@
 #
 
 REMOTE_HOST="192.168.60.140"
-REMOTE_USER="root"
+REMOTE_USER="sigmadev"
 REMOTE_DIR="/opt/drs-validation"
 REPO_URL="https://github.com/arturoSigmadev/sw-DrsValidator.git"
 BRANCH="feature/ui-fixes-final"
@@ -32,25 +32,25 @@ set -e
 echo "📦 Step 1: Cloning/Updating repository..."
 if [ -d /opt/drs-validation ]; then
     cd /opt/drs-validation
-    git fetch origin
-    git checkout feature/ui-fixes-final
-    git pull origin feature/ui-fixes-final
+    sudo git fetch origin
+    sudo git checkout feature/ui-fixes-final
+    sudo git pull origin feature/ui-fixes-final
     echo "✅ Repository updated"
 else
     cd /opt
-    git clone -b feature/ui-fixes-final https://github.com/arturoSigmadev/sw-DrsValidator.git drs-validation
+    sudo git clone -b feature/ui-fixes-final https://github.com/arturoSigmadev/sw-DrsValidator.git drs-validation
     cd drs-validation
     echo "✅ Repository cloned"
 fi
 
 echo ""
 echo "🐳 Step 2: Stopping existing containers..."
-docker-compose down 2>/dev/null || true
+sudo docker-compose down 2>/dev/null || true
 echo "✅ Containers stopped"
 
 echo ""
 echo "🔨 Step 3: Building and starting containers..."
-docker-compose up -d --build
+sudo docker-compose up -d --build
 
 echo ""
 echo "⏳ Step 4: Waiting for service to be ready..."
@@ -58,7 +58,7 @@ sleep 5
 
 echo ""
 echo "🔍 Step 5: Verifying deployment..."
-docker-compose ps
+sudo docker-compose ps
 
 echo ""
 if curl -s http://localhost:8089/api/test | grep -q success; then
