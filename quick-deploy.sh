@@ -17,14 +17,8 @@ BRANCH="feature/ui-fixes-final"
 echo "🚀 Quick Deploy to ${REMOTE_HOST}"
 echo "=================================="
 
-# Check if sshpass is available and SSHPASS is set
-if [ -n "$SSHPASS" ] && command -v sshpass &> /dev/null; then
-    echo "Using sshpass for authentication..."
-    SSH_CMD="sshpass -e ssh -o StrictHostKeyChecking=no"
-else
-    echo "Using standard SSH (will prompt for password)..."
-    SSH_CMD="ssh -o StrictHostKeyChecking=no"
-fi
+# Use SSH key authentication (no password)
+SSH_CMD="ssh -o StrictHostKeyChecking=no"
 
 # Execute deployment commands
 $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} bash << 'ENDSSH'
