@@ -229,14 +229,8 @@ class BatchCommandsValidator:
         if mode.lower() == "mock":
             results = await self._execute_mock_batch_async(commands, command_type)
         else:
-            # For live mode, run in thread pool to avoid blocking
-            import asyncio
-            results = await asyncio.to_thread(
-                self._execute_live_batch, 
-                ip_address, 
-                commands, 
-                command_type
-            )
+            # Modo live con logs detallados en tiempo real
+            results = await self._execute_live_batch_async(ip_address, commands, command_type)
         
         # Calcular estadísticas
         total_duration = int((time.time() - start_time) * 1000)
@@ -361,6 +355,64 @@ class BatchCommandsValidator:
             )
             
             results.append(result)
+        
+        return results
+    
+    async def _execute_live_batch_async(self, ip_address: str, commands: Dict[str, str], command_type: CommandType) -> List[CommandTestResult]:
+        """
+        Versión asíncrona de _execute_live_batch con logs detallados en tiempo real.
+        
+        Conecta al dispositivo DRS y ejecuta comandos reales usando
+        tramas hexadecimales del protocolo Santone, enviando logs detallados via WebSocket.
+        """
+        import asyncio
+        
+        # Log inicial
+        await self._log(f"🔌 Iniciando validación batch de {len(commands)} comandos {command_type.value} en {ip_address}")
+        
+        results = []
+        
+        for i, (cmd_name, hex_frame) in enumerate(commands.items(), 1):
+            start_time = time.time()
+            
+            # Log detallado del comando
+            await self._log(f"📤 [{i}/{len(commands)}] Comando: {cmd_name}")
+            await self._log(f"    📋 Trama enviada: {hex_frame}")
+            
+            # Ejecutar comando en thread pool para no bloquear
+            result = await asyncio.to_thread(
+                self._execute_single_live_command,
+                ip_address,
+                cmd_name,
+                command_type
+            )
+            
+            results.append(result)
+            
+            # Log de la respuesta recibida
+            if result.response_data:
+                await self._log(f"    📥 Respuesta: {result.response_data}")
+            
+            # Log de valores decodificados
+            if result.decoded_values:
+                for key, value in result.decoded_values.items():
+                    if key not in ['status', 'mock_source', 'raw_bytes', 'decoder_mapping']:
+                        await self._log(f"       🔍 {key}: {value}")
+            
+            # Log del resultado
+            if result.status == ValidationResult.PASS:
+                await self._log(f"    ✅ EXITOSO ({result.duration_ms}ms)")
+            elif result.status == ValidationResult.TIMEOUT:
+                await self._log(f"    ⏱️ TIMEOUT ({result.duration_ms}ms)")
+            else:
+                await self._log(f"    ❌ ERROR: {result.error}")
+            
+            # Pequeña pausa entre comandos
+            await asyncio.sleep(0.1)
+        
+        # Log final
+        successful = sum(1 for r in results if r.status == ValidationResult.PASS)
+        await self._log(f"📊 Validación completada: {successful}/{len(commands)} comandos exitosos")
         
         return results
     
