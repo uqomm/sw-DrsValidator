@@ -93,11 +93,33 @@
                                             </label>
                                             <select id="scenarioSelect" name="scenario_id" class="form-control-modern" required>
                                                 <option value="">Seleccionar escenario...</option>
-                                                <option value="dru_remote_check">DRU Remote Device Test</option>
-                                                <option value="batch_remote_commands">Batch Remote Commands</option>
-                                                <option value="device_discovery">Device Discovery Process</option>
-                                                <option value="drs_master_batch">DRS Master Batch Commands</option>
+                                                <option value="remote_test">Remote Test</option>
+                                                <option value="master_test">Master Test</option>
                                             </select>
+                                        </div>
+
+                                        <div class="form-group-modern mb-4">
+                                            <label class="form-label-modern">
+                                                <i class="bi bi-gear me-1"></i>
+                                                Modo de Operación
+                                            </label>
+                                            <div class="d-flex gap-2">
+                                                <input type="radio" class="btn-check" name="mode" id="modeMock" value="mock" checked>
+                                                <label class="btn btn-outline-primary btn-sm" for="modeMock">
+                                                    <i class="bi bi-play-circle me-1"></i>
+                                                    Simulación (Mock)
+                                                </label>
+
+                                                <input type="radio" class="btn-check" name="mode" id="modeLive" value="live">
+                                                <label class="btn btn-outline-danger btn-sm" for="modeLive">
+                                                    <i class="bi bi-wifi me-1"></i>
+                                                    Dispositivo Real (Live)
+                                                </label>
+                                            </div>
+                                            <small class="text-muted mt-1 d-block">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                Modo simulación usa datos de prueba. Modo live requiere dispositivo conectado.
+                                            </small>
                                         </div>
 
                                         <div class="d-flex gap-3 justify-content-end">

@@ -374,19 +374,73 @@ class DRSValidatorUI {
     }
 
     handleLegacyValidationResponse(result) {
-        // Handle the old-style direct response
-        this.appendToOutput(`[INFO] 📊 Resultado directo: ${result.overall_status || result.status}`);
-        this.appendToOutput(`[INFO] 💬 Mensaje: ${result.message}`);
+        // Handle the new BatchCommandsValidator response format
+        this.appendToOutput(`[INFO] 📊 Estado General: ${result.overall_status || result.status}`);
+        this.appendToOutput(`[INFO] 💬 ${result.message}`);
         
+        // Show command type and mode
+        if (result.command_type) {
+            this.appendToOutput(`[INFO] 🔧 Tipo de Comandos: ${result.command_type.toUpperCase()}`);
+        }
+        if (result.mode) {
+            this.appendToOutput(`[INFO] 🎮 Modo: ${result.mode.toUpperCase()}`);
+        }
+        
+        // Show statistics
+        if (result.statistics) {
+            const stats = result.statistics;
+            this.appendToOutput(`[STATS] 📈 Total: ${stats.total_commands} | ✅ Exitosos: ${stats.passed} | ❌ Fallidos: ${stats.failed} | ⏱️ Timeouts: ${stats.timeouts}`);
+            this.appendToOutput(`[STATS] 🎯 Tasa de Éxito: ${stats.success_rate}% | ⏰ Promedio: ${stats.average_duration_ms}ms`);
+        }
+        
+        // Show individual test results with hex frames and decoded values
         if (result.tests && result.tests.length > 0) {
-            result.tests.forEach(test => {
-                const status = test.status === 'PASS' ? '✅' : '❌';
-                this.appendToOutput(`[TEST] ${status} ${test.name}: ${test.message}`);
+            this.appendToOutput(`\n[COMMANDS] 📋 Comandos Ejecutados:`);
+            result.tests.forEach((test, index) => {
+                const status = test.status === 'PASS' ? '✅' : test.status === 'TIMEOUT' ? '⏱️' : '❌';
+                const commandType = test.is_set_command ? 'SET' : 'GET';
+                const typeIcon = test.is_set_command ? '⚙️' : '🔍';
+                
+                // Main command line
+                this.appendToOutput(`\n[${index + 1}] ${status} ${typeIcon} ${commandType} Command: ${test.name}`);
+                this.appendToOutput(`    📝 ${test.message}`);
+                
+                // Show hex frames (sent and received)
+                if (test.details) {
+                    // Try to extract hex frame from details
+                    const hexMatch = test.details.match(/trama: ([0-9A-F]+)/i);
+                    if (hexMatch) {
+                        this.appendToOutput(`    📤 Trama enviada: ${hexMatch[1]}`);
+                    }
+                }
+                
+                if (test.response_data) {
+                    this.appendToOutput(`    📥 Trama recibida: ${test.response_data}`);
+                }
+                
+                // For SET commands, show configuration confirmation
+                if (test.is_set_command && test.status === 'PASS') {
+                    this.appendToOutput(`    ✓ Configuración aplicada correctamente`);
+                }
+                
+                // Show decoded values if available (only for GET commands)
+                if (!test.is_set_command && test.decoded_values && Object.keys(test.decoded_values).length > 0) {
+                    this.appendToOutput(`    🔍 Valores Decodificados:`);
+                    for (const [key, value] of Object.entries(test.decoded_values)) {
+                        if (key !== 'status' && key !== 'mock_source' && key !== 'raw_bytes' && key !== 'decoder_mapping') {
+                            this.appendToOutput(`       • ${key}: ${JSON.stringify(value)}`);
+                        }
+                    }
+                }
+                
+                if (test.duration_ms) {
+                    this.appendToOutput(`    ⏱️ Duración: ${test.duration_ms}ms`);
+                }
             });
         }
         
         this.setProgress(100);
-        this.updateProgressText('Validación completada (modo legacy)');
+        this.updateProgressText('Validación completada');
         this.completeValidation();
     }
 
@@ -853,7 +907,10 @@ class DRSValidatorUI {
         this.setButtonLoading(testBtn, true);
 
         try {
-            const response = await fetch(`/api/validation/ping/${ipInput.value}`, {
+            // Get the selected mode
+            const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+            
+            const response = await fetch(`/api/validation/ping/${ipInput.value}?mode=${selectedMode}`, {
                 method: 'POST'
             });
             

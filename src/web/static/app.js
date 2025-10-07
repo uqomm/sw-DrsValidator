@@ -23,6 +23,11 @@ function formatValidationResults(result) {
     data.tests.forEach(test => {
         const statusClass = test.status?.toLowerCase() || 'unknown';
         const statusIcon = test.status === 'PASS' ? '✅' : test.status === 'FAIL' ? '❌' : '⚠️';
+        
+        // Extract hex frame and decoded values if available
+        const hexFrame = test.hex_frame || '';
+        const decodedValues = test.decoded_values || {};
+        const hasDecodedData = Object.keys(decodedValues).length > 0;
 
         html += `
             <div class="test-item-compact test-${statusClass}">
@@ -34,7 +39,11 @@ function formatValidationResults(result) {
                 <div class="test-compact-details">
                     <div class="test-compact-message">${test.message}</div>
                     ${test.details ? `<div class="test-compact-detail-text">${test.details}</div>` : ''}
-                    ${test.duration_ms ? `<div class="test-compact-duration">${test.duration_ms}ms</div>` : ''}
+                    ${test.duration_ms ? `<div class="test-compact-duration">⏱️ ${test.duration_ms}ms</div>` : ''}
+                    ${hasDecodedData ? `<div class="test-compact-decoded">
+                        <strong>Valores decodificados:</strong>
+                        <pre>${JSON.stringify(decodedValues, null, 2)}</pre>
+                    </div>` : ''}
                 </div>
             </div>
         `;
