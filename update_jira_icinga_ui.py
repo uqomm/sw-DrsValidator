@@ -138,17 +138,16 @@ def main():
     
     updater = JiraUpdater()
     
-    # Issues del proyecto (SW-2: CI/CD, SW-3: Verificación)
-    # Actualizamos SW-3 que es sobre verificación de funcionalidad
-    ui_issue = "SW-3"
+    # Issues del proyecto (SWDM-14 es sobre mejoras de UI y validación)
+    ui_issue = "SWDM-14"
     
     # Comentario detallado del progreso
     progress_comment = """
 📅 Actualización - Octubre 7, 2025
 
-✅ COMPLETADO: Integración Icinga Theme y Optimización UI
+✅ COMPLETADO: Múltiples Mejoras UI, Funcionalidad y Deployment
 
-🎨 Cambios de Diseño Icinga:
+🎨 Integración Icinga Theme:
 • Implementación completa del esquema de colores Icinga
   - Azul primario: #10263b (rgb 16, 38, 59)
   - Naranja secundario: #ff5000 (rgb 255, 80, 0)
@@ -158,31 +157,52 @@ def main():
   - Navegación lateral con colores Icinga
   - Botones primarios y secundarios
   - Estados activos y hover
-  - Brand y elementos de UI
 
 🧹 Optimización de Interfaz:
 • Eliminación de barra superior (breadcrumb) innecesaria
 • Mejora del menú lateral:
   - Íconos más grandes (1.2rem)
   - Texto más legible (1.05rem)
-  - Espaciado óptimo entre ícono y texto (0.75rem)
-• Interfaz más limpia y profesional
+  - Espaciado óptimo (0.75rem)
+
+🐛 Fixes Críticos:
+• RESUELTO: Página de Resultados no se mostraba
+  - Agregado CSS para .tab-content visibility
+  - Auto-carga de resultados al cambiar de pestaña
+  - Verificado endpoint /api/results funciona correctamente
+• RESUELTO: Modo LIVE sin logs detallados
+  - Creado _execute_live_batch_async() con WebSocket logging
+  - Logs detallados: tramas hex, respuestas, valores decodificados
+  - Paridad funcional con modo MOCK
+
+⚙️ Configuración:
+• Puerto cambiado de 8080 a 8089 (libera 8080)
+• Ansible configurado para usuario sigmadev con sudo
+• SSH key authentication (sin passwords)
+• Deshabilitada fase de seguridad SSH en Ansible
 
 📦 Deployment:
-• Cambios commiteados y pusheados a feature/ui-fixes-final
-• Deployment en progreso via Ansible a 192.168.60.140:8089
-• Migración desde servidor anterior (192.168.60.142)
+• 9 commits en feature/ui-fixes-final
+• Scripts de deployment simplificados:
+  - deploy-remote.sh
+  - quick-deploy.sh
+  - DEPLOYMENT_GUIDE.md
+• Target: 192.168.60.140:8089
+• Migración desde: 192.168.60.142
 
 📊 Impacto:
-• Consistencia visual con identidad corporativa Icinga
-• Mejor experiencia de usuario con interfaz optimizada
-• Reducción de elementos visuales innecesarios
-• Mayor profesionalismo en la presentación
+• UI profesional con identidad Icinga
+• Funcionalidad completa de resultados
+• Logs detallados en modo LIVE
+• Deployment simplificado
+• Puerto estandarizado
 
-🔄 Próximos Pasos:
-• Validación del deployment en nuevo servidor
-• Pruebas de usuario final
-• Documentación de cambios visuales
+� Commits:
+- 4b208df: SSH key authentication
+- fdffcf2: Quick deployment script  
+- 45c009b: Results tab visibility + port 8089
+- 219bb5d: Async live mode logging
+- 8aedb32: Icinga theme colors
 """
     
     # Agregar comentario
@@ -193,9 +213,9 @@ def main():
     print(f"\n⏱️  Agregando worklog a {ui_issue}...")
     updater.add_worklog(
         ui_issue,
-        "2h",
-        "Integración completa de Icinga Theme: colores corporativos, tipografía Century Gothic, optimización UI (eliminación breadcrumb, mejora menú lateral). Deployment en progreso.",
-        hours_ago=2
+        "3h",
+        "Integración Icinga Theme + fixes críticos: página resultados, modo LIVE con logs detallados, optimización UI, configuración deployment. 9 commits completados.",
+        hours_ago=3
     )
     
     print("\n" + "=" * 60)
