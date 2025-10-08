@@ -220,16 +220,23 @@ def get_all_master_set_commands() -> Dict[str, str]:
         # SET Working Mode - Channel
         commands['set_working_mode_channel'] = SetCommands.set_working_mode(wideband=False).hex().upper()
         
-        # SET Attenuation - Ejemplo con valores medios
-        commands['set_attenuation'] = SetCommands.set_attenuation(
-            uplink_db=15,
+        # SET Attenuation - Varios valores para probar
+        commands['set_attenuation_10_15'] = SetCommands.set_attenuation(
+            uplink_db=10,
+            downlink_db=15,
+            device_type="dmu"
+        ).hex().upper()
+        
+        commands['set_attenuation_5_20'] = SetCommands.set_attenuation(
+            uplink_db=5,
             downlink_db=20,
             device_type="dmu"
         ).hex().upper()
         
-        # SET Channel Activation - Primeros 8 canales ON, resto OFF
-        channels = [True] * 8 + [False] * 8
-        commands['set_channel_activation'] = SetCommands.set_channel_activation(channels).hex().upper()
+        # SET Channel Activation - Varios patrones
+        commands['set_channels_all_on'] = SetCommands.set_channel_activation([True] * 16).hex().upper()
+        commands['set_channels_all_off'] = SetCommands.set_channel_activation([False] * 16).hex().upper()
+        commands['set_channels_first_8_on'] = SetCommands.set_channel_activation([True] * 8 + [False] * 8).hex().upper()
         
         # SET Channel Frequencies - VHF
         vhf_freqs = SetCommands.generate_vhf_frequencies()
@@ -261,10 +268,16 @@ def get_all_remote_set_commands() -> Dict[str, str]:
         # SET Working Mode - Channel
         commands['remote_set_working_mode_channel'] = SetCommands.set_working_mode(wideband=False).hex().upper()
         
-        # SET Attenuation - Ejemplo con valores medios para DRU
-        commands['remote_set_attenuation'] = SetCommands.set_attenuation(
+        # SET Attenuation - Varios valores para probar
+        commands['remote_set_attenuation_12_18'] = SetCommands.set_attenuation(
             uplink_db=12,
             downlink_db=18,
+            device_type="dru"
+        ).hex().upper()
+        
+        commands['remote_set_attenuation_8_16'] = SetCommands.set_attenuation(
+            uplink_db=8,
+            downlink_db=16,
             device_type="dru"
         ).hex().upper()
         
