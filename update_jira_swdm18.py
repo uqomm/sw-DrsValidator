@@ -201,9 +201,9 @@ La funcionalidad se integra perfectamente con el sistema existente de almacenami
     print(f"\n⏱️  Agregando worklog a {issue}...")
     updater.add_worklog(
         issue,
-        "2h",
+        "30m",
         "Implementación de página dedicada de resultados detallados. Creación de template HTML, endpoint backend, modificación de JavaScript para abrir en nueva pestaña. Mejora significativa en UX para análisis de validaciones.",
-        hours_ago=2
+        hours_ago=1
     )
     
     print("\n" + "=" * 60)

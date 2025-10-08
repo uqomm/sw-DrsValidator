@@ -383,11 +383,11 @@ body {
 
 /* Tab Content Visibility Control */
 .tab-content {
-    display: none;
+    display: none !important;
 }
 
 .tab-content.active {
-    display: block;
+    display: block !important;
 }
 
 /* Row layout for tab content */

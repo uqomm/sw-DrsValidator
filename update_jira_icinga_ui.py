@@ -213,13 +213,13 @@ def main():
         print(f"  Agregando comentario...")
         updater.add_comment(issue_key, progress_comment)
         
-        # Agregar worklog
+        # Agregar worklog (distribuido más realisticamente)
         print(f"  Agregando worklog...")
         updater.add_worklog(
             issue_key,
-            "3h",
+            "45m",
             "Integración Icinga Theme + fixes críticos: página resultados, modo LIVE con logs detallados, optimización UI, configuración deployment. 9 commits completados.",
-            hours_ago=3
+            hours_ago=2
         )
     
     print("\n" + "=" * 60)
