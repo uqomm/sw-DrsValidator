@@ -533,6 +533,12 @@ async def root(request: Request):
     return templates.TemplateResponse("index-modern.html", {"request": request})
 
 
+@app.get("/result", response_class=HTMLResponse)
+async def result_detail_page(request: Request):
+    """Result detail page - shows individual validation result"""
+    return templates.TemplateResponse("result-detail.html", {"request": request})
+
+
 @app.get("/api/test")
 async def test_endpoint():
     """Test endpoint to verify API functionality"""

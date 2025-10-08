@@ -782,21 +782,8 @@ class DRSValidatorUI {
     }
 
     async viewResult(resultId) {
-        try {
-            const response = await fetch(`/api/results/${resultId}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const result = await response.json();
-            
-            // Show result in modal or new tab
-            this.showResultModal(result);
-        } catch (error) {
-            console.error('Error loading result:', error);
-            this.showToast('error', `Error al cargar el resultado: ${error.message}`);
-        }
+        // Open result in new tab/window
+        window.open(`/result?id=${resultId}`, '_blank');
     }
     
     showResultModal(data) {
