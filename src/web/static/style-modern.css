@@ -489,6 +489,10 @@ body {
         display: none !important;
     }
     
+    .breadcrumb {
+        display: none !important;
+    }
+    
     .sidebar {
         display: none !important;
     }
@@ -540,6 +544,43 @@ body {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
+}
+
+/* Breadcrumb Styles */
+.breadcrumb {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    font-family: 'Century Gothic', 'Inter', sans-serif;
+    font-size: 0.95rem;
+    margin-bottom: 0;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+}
+
+.breadcrumb-item.active {
+    color: #10263b;
+    font-weight: 600;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: ">";
+    color: #6c757d;
+    font-weight: bold;
+    margin: 0 0.5rem;
+}
+
+.breadcrumb-item a {
+    color: #10263b;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.breadcrumb-item a:hover {
+    color: #ff5000;
+    text-decoration: underline;
 }
 
 /* Enhanced form styling for device config panel */

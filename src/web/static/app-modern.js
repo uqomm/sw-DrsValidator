@@ -804,6 +804,9 @@ class DRSValidatorUI {
         document.getElementById('resultsListView').style.display = 'none';
         document.getElementById('resultDetailView').style.display = 'block';
         
+        // Update breadcrumbs
+        this.updateBreadcrumbs(data);
+        
         // Get the detail content container
         const contentDiv = document.getElementById('resultDetailContent');
         
@@ -950,6 +953,39 @@ class DRSValidatorUI {
         // Show the results list and hide the detail view
         document.getElementById('resultsListView').style.display = 'block';
         document.getElementById('resultDetailView').style.display = 'none';
+        
+        // Reset breadcrumbs to show only historial
+        this.resetBreadcrumbs();
+    }
+    
+    updateBreadcrumbs(data) {
+        const breadcrumb = document.getElementById('resultsBreadcrumb');
+        const request = data.request || {};
+        const deviceInfo = request.serial_number || request.ip_address || 'Validación';
+        const timestamp = new Date(data.timestamp).toLocaleDateString('es-ES');
+        
+        breadcrumb.innerHTML = `
+            <li class="breadcrumb-item">
+                <a href="#" onclick="drsUI.showResultsList(); return false;">
+                    <i class="bi bi-clipboard-data me-1"></i>
+                    Historial de Validaciones
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                <i class="bi bi-file-text me-1"></i>
+                ${deviceInfo} - ${timestamp}
+            </li>
+        `;
+    }
+    
+    resetBreadcrumbs() {
+        const breadcrumb = document.getElementById('resultsBreadcrumb');
+        breadcrumb.innerHTML = `
+            <li class="breadcrumb-item active" aria-current="page">
+                <i class="bi bi-clipboard-data me-1"></i>
+                Historial de Validaciones
+            </li>
+        `;
     }
     
     printResultDetail() {
