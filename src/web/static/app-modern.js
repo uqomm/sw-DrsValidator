@@ -759,13 +759,17 @@ class DRSValidatorUI {
             const statusClass = status === 'PASS' ? 'success' : status === 'FAIL' ? 'danger' : 'warning';
             const duration = resultData.duration_ms ? `${resultData.duration_ms}ms` : 'N/A';
             const filename = result.filename || '';
+            
+            // Determinar tipo de prueba basado en command_type
+            const commandType = resultData.command_type || request.command_type || 'N/A';
+            const testType = commandType.toUpperCase();
 
             return `
                 <tr>
                     <td>${timestamp}</td>
                     <td>${request.ip_address || resultData.ip_address || 'N/A'}</td>
                     <td>${request.serial_number || 'N/A'}</td>
-                    <td>${request.hostname || resultData.command_type || 'N/A'}</td>
+                    <td><span class="badge bg-info">${testType}</span></td>
                     <td><span class="badge bg-${statusClass}">${status}</span></td>
                     <td>${duration}</td>
                     <td>
@@ -803,7 +807,24 @@ class DRSValidatorUI {
 
             const result = data.result || {};
             const request = data.request || {};
-            const stats = result.statistics || {};
+            let stats = result.statistics || {};
+            
+            // Calcular estadísticas si no existen
+            if (!stats.total_commands && result.results) {
+                const results = result.results || [];
+                const passed = results.filter(r => r.status === 'PASS').length;
+                const failed = results.filter(r => r.status !== 'PASS').length;
+                const total = results.length;
+                const avgDuration = total > 0 ? results.reduce((sum, r) => sum + (r.duration_ms || 0), 0) / total : 0;
+                
+                stats = {
+                    total_commands: total,
+                    passed: passed,
+                    failed: failed,
+                    success_rate: total > 0 ? Math.round(passed / total * 100 * 10) / 10 : 0,
+                    average_duration_ms: Math.round(avgDuration * 10) / 10
+                };
+            }
 
             detailView.innerHTML = `
                 <div class="row">
@@ -835,10 +856,9 @@ class DRSValidatorUI {
                                         <table class="table table-sm">
                                             <tr><td><strong>IP:</strong></td><td>${request.ip_address || result.ip_address || 'N/A'}</td></tr>
                                             <tr><td><strong>Tipo:</strong></td><td>${request.device_type || 'N/A'}</td></tr>
-                                            <tr><td><strong>Hostname:</strong></td><td>${request.hostname || 'N/A'}</td></tr>
+                                            <tr><td><strong>Tipo de Prueba:</strong></td><td><span class="badge bg-info">${(result.command_type || 'N/A').toUpperCase()}</span></td></tr>
                                             <tr><td><strong>Serial:</strong></td><td>${request.serial_number || 'N/A'}</td></tr>
                                             <tr><td><strong>Modo:</strong></td><td>${result.mode || request.live_mode ? 'Live' : 'Mock'}</td></tr>
-                                            <tr><td><strong>Escenario:</strong></td><td>${result.command_type || 'N/A'}</td></tr>
                                         </table>
                                     </div>
                                     <div class="col-md-6">

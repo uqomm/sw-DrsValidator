@@ -28,24 +28,19 @@ from .hex_frames import (
     get_set_frame,
     get_master_command_frame,
     get_remote_command_frame,
-    validate_frame_format
-)
-from .decoder_integration import (
-    CommandDecoderMapping, 
-    create_mock_decoder_response
-)
-
-from .hex_frames import (
+    get_master_set_command_frame,
+    get_remote_set_command_frame,
+    validate_frame_format,
     DRS_MASTER_FRAMES, 
     DRS_REMOTE_FRAMES,
     DRS_SET_FRAMES,
     get_all_master_commands,
     get_all_remote_commands,
-    get_all_set_commands,
-    get_master_frame,
-    get_remote_frame,
-    get_set_frame,
-    validate_frame_format
+    get_all_set_commands
+)
+from .decoder_integration import (
+    CommandDecoderMapping, 
+    create_mock_decoder_response
 )
 
 class CommandType(Enum):
@@ -537,14 +532,19 @@ class BatchCommandsValidator:
         
         try:
             # Obtener trama hexadecimal para el comando
+            frame = ""
             if command_type == CommandType.MASTER:
                 frame = get_master_frame(command)
+                # Si no se encontró, buscar en comandos SET master
+                if not frame and (command.startswith('set_') or 'set_' in command):
+                    frame = get_master_set_command_frame(command)
             elif command_type == CommandType.REMOTE:
                 frame = get_remote_frame(command)
+                # Si no se encontró, buscar en comandos SET remote
+                if not frame and (command.startswith('remote_set_') or 'set_' in command):
+                    frame = get_remote_set_command_frame(command)
             elif command_type == CommandType.SET:
                 frame = get_set_frame(command)
-            else:
-                frame = ""
             
             if not frame:
                 return CommandTestResult(
