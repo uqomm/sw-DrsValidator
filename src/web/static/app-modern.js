@@ -877,9 +877,13 @@ class DRSValidatorUI {
         
         contentDiv.innerHTML = detailHTML;
         
-        // Add event listener for back button
+        // Add event listeners for back and print buttons
         document.getElementById('backToResultsBtn').addEventListener('click', () => {
             this.showResultsList();
+        });
+        
+        document.getElementById('printResultBtn').addEventListener('click', () => {
+            this.printResultDetail();
         });
     }
     
@@ -946,6 +950,12 @@ class DRSValidatorUI {
         // Show the results list and hide the detail view
         document.getElementById('resultsListView').style.display = 'block';
         document.getElementById('resultDetailView').style.display = 'none';
+    }
+    
+    printResultDetail() {
+        // Trigger browser print dialog
+        // The CSS @media print rules will handle the layout
+        window.print();
     }
     
     showResultModal(data) {

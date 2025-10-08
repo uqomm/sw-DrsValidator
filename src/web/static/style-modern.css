@@ -483,6 +483,65 @@ body {
     overflow-x: auto;
 }
 
+/* Print Styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .sidebar {
+        display: none !important;
+    }
+    
+    .topbar {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .card-modern {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        break-inside: avoid;
+    }
+    
+    .result-detail-section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    .result-command-row {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    body {
+        font-size: 12pt;
+        line-height: 1.4;
+    }
+    
+    h4, h5 {
+        color: #000 !important;
+    }
+    
+    .result-status-badge.pass {
+        background-color: #d4edda !important;
+        color: #155724 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .result-status-badge.fail {
+        background-color: #f8d7da !important;
+        color: #721c24 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
 /* Enhanced form styling for device config panel */
 .card-modern .form-group-modern .form-control-modern {
   border-radius: var(--border-radius-md);
