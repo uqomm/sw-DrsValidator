@@ -489,7 +489,7 @@ body {
 }
 
 .results-view-visible {
-    display: block !important;
+    display: flex !important;
 }
 
 /* Print Styles */

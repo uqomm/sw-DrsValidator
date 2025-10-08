@@ -705,23 +705,35 @@ class DRSValidatorUI {
     }
 
     /* ========================================
-       RESULTS MANAGEMENT
+       RESULTS & BREADCRUMBS
     ======================================== */
+
+    /**
+     * Load previous validation results from the API
+     */
     async loadPreviousResults() {
         try {
             const response = await fetch('/api/results');
+            if (!response.ok) {
+                throw new Error('Failed to fetch results');
+            }
+            
             const data = await response.json();
             
-            // Extract the actual results array from the API response
-            const results = data.results || [];
-            this.updateResultsTable(results);
+            // Handle both array and object responses
+            let results = Array.isArray(data) ? data : (data.results || []);
+            
+            this.renderResultsTable(results);
         } catch (error) {
             console.error('Error loading results:', error);
-            this.updateResultsTable([]);
+            this.showToast('error', 'Error al cargar resultados históricos');
         }
     }
 
-    updateResultsTable(results) {
+    /**
+     * Render the results table with validation data
+     */
+    renderResultsTable(results) {
         const tbody = document.getElementById('resultsTableBody');
         if (!tbody) return;
 
@@ -738,44 +750,27 @@ class DRSValidatorUI {
         }
 
         tbody.innerHTML = results.map(result => {
-            // Extract data from the new format
-            const timestamp = result.timestamp || 'N/A';
+            // Extract data from nested structure
             const request = result.request || {};
             const resultData = result.result || {};
+            
+            const timestamp = new Date(result.timestamp).toLocaleString('es-ES');
+            const status = resultData.overall_status || 'UNKNOWN';
+            const statusClass = status === 'PASS' ? 'success' : status === 'FAIL' ? 'danger' : 'warning';
+            const duration = resultData.duration_ms ? `${resultData.duration_ms}ms` : 'N/A';
             const filename = result.filename || '';
-            
-            const deviceIp = request.ip_address || 'N/A';
-            const deviceType = request.device_type || 'N/A';
-            const serialNumber = request.serial_number || 'N/A';
-            const scenario = request.hostname || deviceType;
-            const overallStatus = resultData.overall_status || 'UNKNOWN';
-            const stats = resultData.statistics || {};
-            const duration = resultData.total_duration_ms ? `${resultData.total_duration_ms}ms` : 'N/A';
-            
-            const isSuccess = overallStatus === 'PASS';
-            const statusClass = isSuccess ? 'success' : 'error';
-            const statusText = isSuccess ? 'Exitoso' : 'Falló';
-            const statusIcon = isSuccess ? 'check-circle-fill' : 'x-circle-fill';
-            
+
             return `
                 <tr>
-                    <td>${new Date(timestamp).toLocaleString()}</td>
-                    <td>${deviceIp}</td>
-                    <td><span class="badge bg-secondary">${serialNumber}</span></td>
-                    <td>${scenario}</td>
-                    <td>
-                        <span class="status-indicator status-${statusClass}">
-                            <i class="bi bi-${statusIcon}"></i>
-                            ${statusText} (${stats.passed || 0}/${stats.total_commands || 0})
-                        </span>
-                    </td>
+                    <td>${timestamp}</td>
+                    <td>${request.ip_address || resultData.ip_address || 'N/A'}</td>
+                    <td>${request.serial_number || 'N/A'}</td>
+                    <td>${request.hostname || resultData.command_type || 'N/A'}</td>
+                    <td><span class="badge bg-${statusClass}">${status}</span></td>
                     <td>${duration}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="drsUI.viewResult('${filename}')">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="drsUI.downloadResult('${filename}')">
-                            <i class="bi bi-download"></i>
+                        <button class="btn btn-sm btn-primary" onclick="window.drsUI.showResultDetail('${filename}')">
+                            <i class="bi bi-eye"></i> Ver
                         </button>
                     </td>
                 </tr>
@@ -783,239 +778,184 @@ class DRSValidatorUI {
         }).join('');
     }
 
-    async viewResult(resultId) {
+    /**
+     * Render detailed view of a specific result
+     */
+    async renderResultDetail(filename) {
+        const detailView = document.getElementById('resultDetailView');
+        if (!detailView) return;
+
         try {
-            const response = await fetch(`/api/results/${resultId}`);
-            
+            // Fetch all results and find the one with matching filename
+            const response = await fetch('/api/results');
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error('Failed to fetch result details');
             }
+
+            const allResults = await response.json();
+            const results = Array.isArray(allResults) ? allResults : (allResults.results || []);
             
-            const result = await response.json();
-            
-            // Show result detail within the results section
-            this.showResultDetail(result);
-        } catch (error) {
-            console.error('Error loading result:', error);
-            this.showToast('error', `Error al cargar el resultado: ${error.message}`);
-        }
-    }
-    
-    showResultDetail(data) {
-        // Hide the results list and show the detail view using CSS classes
-        const resultsListView = document.getElementById('resultsListView');
-        const resultDetailView = document.getElementById('resultDetailView');
-        
-        resultsListView.classList.add('results-view-hidden');
-        resultsListView.classList.remove('results-view-visible');
-        
-        resultDetailView.classList.remove('results-view-hidden');
-        resultDetailView.classList.add('results-view-visible');
-        resultDetailView.style.display = 'block';
-        
-        // Update breadcrumbs
-        this.updateBreadcrumbs(data);
-        
-        // Get the detail content container
-        const contentDiv = document.getElementById('resultDetailContent');
-        
-        const result = data.result || data;
-        const request = data.request || {};
-        const stats = result.statistics || {};
-        
-        // Build the detail view HTML
-        const detailHTML = `
-            <!-- Overview Section -->
-            <div class="result-detail-section mb-4">
-                <h5><i class="bi bi-info-circle"></i> Información General</h5>
+            // Find the specific result by filename
+            const data = results.find(r => r.filename === filename);
+            if (!data) {
+                throw new Error('Result not found');
+            }
+
+            const result = data.result || {};
+            const request = data.request || {};
+            const stats = result.statistics || {};
+
+            detailView.innerHTML = `
                 <div class="row">
-                    <div class="col-md-3">
-                        <div class="result-stat-box">
-                            <div class="stat-value">
-                                <span class="result-status-badge ${result.overall_status === 'PASS' ? 'pass' : 'fail'}">
-                                    <i class="bi bi-${result.overall_status === 'PASS' ? 'check-circle-fill' : 'x-circle-fill'}"></i>
-                                    ${result.overall_status || 'UNKNOWN'}
-                                </span>
+                    <div class="col-12 mb-3">
+                        <button class="btn-modern btn-secondary" onclick="window.drsUI.showResultsList()">
+                            <i class="bi bi-arrow-left me-1"></i> Volver al Historial
+                        </button>
+                    </div>
+                    <div class="col-12">
+                        <div class="card-modern">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h4 class="m-0">
+                                    <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                                    Detalle de Validación
+                                </h4>
+                                <div>
+                                    <button class="btn-modern btn-secondary me-2" onclick="window.drsUI.printResultDetail()">
+                                        <i class="bi bi-printer me-1"></i> Imprimir
+                                    </button>
+                                    <button class="btn-modern btn-primary" onclick="window.drsUI.downloadResult('${filename}')">
+                                        <i class="bi bi-download me-1"></i> Descargar
+                                    </button>
+                                </div>
                             </div>
-                            <div class="stat-label">Estado General</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="result-stat-box">
-                            <div class="stat-value">${stats.total_commands || 0}</div>
-                            <div class="stat-label">Total Comandos</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="result-stat-box">
-                            <div class="stat-value">${stats.passed || 0}</div>
-                            <div class="stat-label">Exitosos</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="result-stat-box">
-                            <div class="stat-value">${stats.success_rate || 0}%</div>
-                            <div class="stat-label">Tasa de Éxito</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                            <div class="card-body">
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <h5><i class="bi bi-info-circle me-2"></i>Información del Dispositivo</h5>
+                                        <table class="table table-sm">
+                                            <tr><td><strong>IP:</strong></td><td>${request.ip_address || result.ip_address || 'N/A'}</td></tr>
+                                            <tr><td><strong>Tipo:</strong></td><td>${request.device_type || 'N/A'}</td></tr>
+                                            <tr><td><strong>Hostname:</strong></td><td>${request.hostname || 'N/A'}</td></tr>
+                                            <tr><td><strong>Serial:</strong></td><td>${request.serial_number || 'N/A'}</td></tr>
+                                            <tr><td><strong>Modo:</strong></td><td>${result.mode || request.live_mode ? 'Live' : 'Mock'}</td></tr>
+                                            <tr><td><strong>Escenario:</strong></td><td>${result.command_type || 'N/A'}</td></tr>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5><i class="bi bi-graph-up me-2"></i>Estadísticas</h5>
+                                        <table class="table table-sm">
+                                            <tr><td><strong>Estado General:</strong></td><td><span class="badge bg-${result.overall_status === 'PASS' ? 'success' : 'danger'}">${result.overall_status || 'N/A'}</span></td></tr>
+                                            <tr><td><strong>Total Comandos:</strong></td><td>${stats.total_commands || 0}</td></tr>
+                                            <tr><td><strong>Exitosos:</strong></td><td class="text-success">${stats.passed || 0}</td></tr>
+                                            <tr><td><strong>Fallidos:</strong></td><td class="text-danger">${stats.failed || 0}</td></tr>
+                                            <tr><td><strong>Tasa de Éxito:</strong></td><td>${stats.success_rate || 0}%</td></tr>
+                                            <tr><td><strong>Duración Promedio:</strong></td><td>${stats.average_duration_ms || 0}ms</td></tr>
+                                        </table>
+                                    </div>
+                                </div>
 
-            <!-- Device Information -->
-            <div class="result-detail-section mb-4">
-                <h5><i class="bi bi-hdd-network"></i> Información del Dispositivo</h5>
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Dirección IP:</strong> ${request.ip_address || 'N/A'}</p>
-                        <p><strong>Tipo de Dispositivo:</strong> ${request.device_type || 'N/A'}</p>
-                        <p><strong>Número de Serie:</strong> ${request.serial_number || 'N/A'}</p>
+                                <h5><i class="bi bi-list-check me-2"></i>Resultados de Comandos</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Comando</th>
+                                                <th>Estado</th>
+                                                <th>Trama Enviada</th>
+                                                <th>Respuesta</th>
+                                                <th>Duración</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${(result.results || []).map((test, index) => {
+                                                const decodedVals = test.decoded_values || {};
+                                                const decodedStr = JSON.stringify(decodedVals, null, 2);
+                                                return `
+                                                <tr>
+                                                    <td>${index + 1}</td>
+                                                    <td><code>${test.command || 'N/A'}</code></td>
+                                                    <td><span class="badge bg-${test.status === 'PASS' ? 'success' : 'danger'}">${test.status}</span></td>
+                                                    <td><small><code>${test.details || 'N/A'}</code></small></td>
+                                                    <td><small><code>${test.response_data || 'N/A'}</code></small></td>
+                                                    <td>${test.duration_ms || 0}ms</td>
+                                                </tr>
+                                            `}).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <p><strong>Modo:</strong> ${request.live_mode ? 'Live' : 'Mock'}</p>
-                        <p><strong>Fecha y Hora:</strong> ${new Date(data.timestamp).toLocaleString('es-ES')}</p>
-                        <p><strong>Duración Total:</strong> ${result.total_duration_ms ? `${result.total_duration_ms} ms` : 'N/A'}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Command Results -->
-            <div class="result-detail-section">
-                <h5><i class="bi bi-list-check"></i> Resultados de Comandos</h5>
-                <div id="commandResults">
-                    ${this.renderCommandResults(result.results || [])}
-                </div>
-            </div>
-        `;
-        
-        contentDiv.innerHTML = detailHTML;
-        
-        // Add event listeners for back and print buttons
-        document.getElementById('backToResultsBtn').addEventListener('click', () => {
-            this.showResultsList();
-        });
-        
-        document.getElementById('printResultBtn').addEventListener('click', () => {
-            this.printResultDetail();
-        });
-    }
-    
-    renderCommandResults(commands) {
-        if (commands.length === 0) {
-            return '<p class="text-muted">No hay resultados de comandos disponibles.</p>';
-        }
-
-        return commands.map((cmd, index) => {
-            const status = cmd.status || 'UNKNOWN';
-            const isPassed = status === 'PASS';
-            
-            return `
-                <div class="result-command-row ${isPassed ? 'pass' : 'fail'}">
-                    <div class="result-command-header">
-                        <span class="result-command-name">${index + 1}. ${cmd.command || 'Unknown Command'}</span>
-                        <span class="badge bg-${isPassed ? 'success' : 'danger'}">
-                            <i class="bi bi-${isPassed ? 'check-circle' : 'x-circle'}"></i>
-                            ${status}
-                        </span>
-                    </div>
-                    
-                    ${cmd.frame_hex ? `
-                        <div>
-                            <strong>Trama Hex:</strong>
-                            <div class="result-code-block">${cmd.frame_hex}</div>
-                        </div>
-                    ` : ''}
-                    
-                    ${cmd.response_hex ? `
-                        <div>
-                            <strong>Respuesta Hex:</strong>
-                            <div class="result-code-block">${cmd.response_hex}</div>
-                        </div>
-                    ` : ''}
-                    
-                    ${cmd.decoded_values ? `
-                        <div>
-                            <strong>Valores Decodificados:</strong>
-                            <div class="result-code-block">${JSON.stringify(cmd.decoded_values, null, 2)}</div>
-                        </div>
-                    ` : ''}
-                    
-                    ${cmd.details ? `
-                        <div>
-                            <strong>Detalles:</strong>
-                            <div class="result-code-block">${cmd.details}</div>
-                        </div>
-                    ` : ''}
-                    
-                    ${cmd.duration_ms ? `
-                        <div>
-                            <small class="text-muted">
-                                <i class="bi bi-clock"></i> Duración: ${cmd.duration_ms} ms
-                            </small>
-                        </div>
-                    ` : ''}
                 </div>
             `;
-        }).join('');
+        } catch (error) {
+            console.error('Error loading result detail:', error);
+            detailView.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Error al cargar los detalles del resultado: ${error.message}
+                </div>
+            `;
+        }
     }
-    
-    showResultsList() {
-        // Show the results list and hide the detail view using CSS classes
-        const resultsListView = document.getElementById('resultsListView');
-        const resultDetailView = document.getElementById('resultDetailView');
-        
-        resultsListView.classList.remove('results-view-hidden');
-        resultsListView.classList.add('results-view-visible');
-        resultsListView.style.display = 'block';
-        
-        resultDetailView.classList.add('results-view-hidden');
-        resultDetailView.classList.remove('results-view-visible');
-        
-        // Reset breadcrumbs to show only historial
-        this.resetBreadcrumbs();
-    }
-    
+
+    /**
+     * Ensures the results view is in its initial state (list view visible).
+     */
     ensureResultsInitialState() {
-        // Make sure we start with the list view visible and detail view hidden
-        const resultsListView = document.getElementById('resultsListView');
-        const resultDetailView = document.getElementById('resultDetailView');
-        
-        if (resultsListView) {
-            resultsListView.classList.remove('results-view-hidden');
-            resultsListView.classList.add('results-view-visible');
-            resultsListView.style.display = 'block';
+        this.showResultsList();
+    }
+
+    /**
+     * Shows the list of validation results and hides the detail view.
+     */
+    showResultsList() {
+        const listView = document.getElementById('resultsListView');
+        const detailView = document.getElementById('resultDetailView');
+
+        if (listView) {
+            listView.classList.remove('results-view-hidden');
+            listView.classList.add('results-view-visible');
+        }
+        if (detailView) {
+            detailView.classList.remove('results-view-visible');
+            detailView.classList.add('results-view-hidden');
+        }
+
+        this.updateBreadcrumbForListView();
+    }
+
+    /**
+     * Shows the detail view for a specific result and hides the list view.
+     * @param {string} resultId - The ID of the result to display.
+     */
+    async showResultDetail(resultId) {
+        const listView = document.getElementById('resultsListView');
+        const detailView = document.getElementById('resultDetailView');
+
+        if (listView) {
+            listView.classList.remove('results-view-visible');
+            listView.classList.add('results-view-hidden');
+        }
+        if (detailView) {
+            detailView.classList.remove('results-view-hidden');
+            detailView.classList.add('results-view-visible');
         }
         
-        if (resultDetailView) {
-            resultDetailView.classList.add('results-view-hidden');
-            resultDetailView.classList.remove('results-view-visible');
-        }
+        // Fetch and render the detailed view
+        await this.renderResultDetail(resultId);
         
-        // Reset breadcrumbs
-        this.resetBreadcrumbs();
+        this.updateBreadcrumbForDetailView(resultId);
     }
-    
-    updateBreadcrumbs(data) {
+
+    /**
+     * Updates the breadcrumb navigation when viewing the results list.
+     */
+    updateBreadcrumbForListView() {
         const breadcrumb = document.getElementById('resultsBreadcrumb');
-        const request = data.request || {};
-        const deviceInfo = request.serial_number || request.ip_address || 'Validación';
-        const timestamp = new Date(data.timestamp).toLocaleDateString('es-ES');
-        
-        breadcrumb.innerHTML = `
-            <li class="breadcrumb-item">
-                <a href="#" onclick="drsUI.showResultsList(); return false;">
-                    <i class="bi bi-clipboard-data me-1"></i>
-                    Historial de Validaciones
-                </a>
-            </li>
-            <li class="breadcrumb-item active" aria-current="page">
-                <i class="bi bi-file-text me-1"></i>
-                ${deviceInfo} - ${timestamp}
-            </li>
-        `;
-    }
-    
-    resetBreadcrumbs() {
-        const breadcrumb = document.getElementById('resultsBreadcrumb');
+        if (!breadcrumb) return;
+
         breadcrumb.innerHTML = `
             <li class="breadcrumb-item active" aria-current="page">
                 <i class="bi bi-clipboard-data me-1"></i>
@@ -1023,7 +963,42 @@ class DRSValidatorUI {
             </li>
         `;
     }
-    
+
+    /**
+     * Updates the breadcrumb navigation when viewing a result's details.
+     * @param {string} resultId - The ID of the result being viewed.
+     */
+    updateBreadcrumbForDetailView(resultId) {
+        const breadcrumb = document.getElementById('resultsBreadcrumb');
+        if (!breadcrumb) return;
+
+        // Create a link to go back to the list view
+        const listLink = document.createElement('a');
+        listLink.href = '#';
+        listLink.innerHTML = `<i class="bi bi-clipboard-data me-1"></i> Historial de Validaciones`;
+        listLink.onclick = (e) => {
+            e.preventDefault();
+            this.showResultsList();
+        };
+
+        const listItem = document.createElement('li');
+        listItem.className = 'breadcrumb-item';
+        listItem.appendChild(listLink);
+
+        breadcrumb.innerHTML = ''; // Clear existing breadcrumbs
+        breadcrumb.appendChild(listItem);
+
+        // Add the active detail view item
+        const detailItem = document.createElement('li');
+        detailItem.className = 'breadcrumb-item active';
+        detailItem.setAttribute('aria-current', 'page');
+        detailItem.innerHTML = `<i class="bi bi-file-earmark-text me-1"></i> Detalle: ${resultId}`;
+        breadcrumb.appendChild(detailItem);
+    }
+
+    /* ========================================
+       PRINTING
+    ======================================== */
     printResultDetail() {
         // Trigger browser print dialog
         // The CSS @media print rules will handle the layout
