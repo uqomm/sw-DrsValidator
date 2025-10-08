@@ -4,11 +4,13 @@
   hosts: minipc
   become: true
   gather_facts: false
+  vars:
+    project_root: "{{ playbook_dir }}/../.."
 
   tasks:
     - name: Copy application source code
       copy:
-        src: "../../../src/"
+        src: "{{ project_root }}/src/"
         dest: "{{ app_dir }}/src/"
         owner: "{{ system_user }}"
         group: "{{ system_group }}"
@@ -16,7 +18,7 @@
 
     - name: Copy docker-compose.yml
       copy:
-        src: "../../../docker-compose.yml"
+        src: "{{ project_root }}/docker-compose.yml"
         dest: "{{ app_dir }}/docker-compose.yml"
         owner: "{{ system_user }}"
         group: "{{ system_group }}"
@@ -24,7 +26,7 @@
 
     - name: Copy Dockerfile
       copy:
-        src: "../../../Dockerfile"
+        src: "{{ project_root }}/Dockerfile"
         dest: "{{ app_dir }}/Dockerfile"
         owner: "{{ system_user }}"
         group: "{{ system_group }}"
@@ -32,7 +34,7 @@
 
     - name: Copy requirements.txt
       copy:
-        src: "../../../requirements.txt"
+        src: "{{ project_root }}/requirements.txt"
         dest: "{{ app_dir }}/requirements.txt"
         owner: "{{ system_user }}"
         group: "{{ system_group }}"
