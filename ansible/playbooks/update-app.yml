@@ -1,0 +1,81 @@
+---
+# Quick update playbook - Updates application code and restarts services
+- name: "DRS Validation Framework - Quick Update"
+  hosts: minipc
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Copy application source code
+      copy:
+        src: "../../../src/"
+        dest: "{{ app_dir }}/src/"
+        owner: "{{ system_user }}"
+        group: "{{ system_group }}"
+        mode: preserve
+
+    - name: Copy docker-compose.yml
+      copy:
+        src: "../../../docker-compose.yml"
+        dest: "{{ app_dir }}/docker-compose.yml"
+        owner: "{{ system_user }}"
+        group: "{{ system_group }}"
+        mode: '0644'
+
+    - name: Copy Dockerfile
+      copy:
+        src: "../../../Dockerfile"
+        dest: "{{ app_dir }}/Dockerfile"
+        owner: "{{ system_user }}"
+        group: "{{ system_group }}"
+        mode: '0644'
+
+    - name: Copy requirements.txt
+      copy:
+        src: "../../../requirements.txt"
+        dest: "{{ app_dir }}/requirements.txt"
+        owner: "{{ system_user }}"
+        group: "{{ system_group }}"
+        mode: '0644'
+
+    - name: Stop current Docker containers
+      command: docker compose down
+      args:
+        chdir: "{{ app_dir }}"
+      become_user: "{{ system_user }}"
+      ignore_errors: yes
+
+    - name: Rebuild Docker image with new code
+      command: docker compose build --no-cache
+      args:
+        chdir: "{{ app_dir }}"
+      become_user: "{{ system_user }}"
+
+    - name: Start Docker containers with new configuration
+      command: docker compose up -d
+      args:
+        chdir: "{{ app_dir }}"
+      become_user: "{{ system_user }}"
+
+    - name: Wait for application to be ready
+      wait_for:
+        host: localhost
+        port: "{{ app_port }}"
+        delay: 5
+        timeout: 60
+
+    - name: Verify application health
+      uri:
+        url: "http://localhost:{{ app_port }}/health"
+        method: GET
+        status_code: 200
+      register: health_check
+      retries: 3
+      delay: 5
+
+    - name: Display deployment status
+      debug:
+        msg: |
+          ✅ Application updated successfully!
+          🌐 Access URL: http://{{ ansible_host }}:{{ app_port }}
+          📊 Health Status: {{ health_check.json | default('OK') }}
