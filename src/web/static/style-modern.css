@@ -376,11 +376,6 @@ body {
     display: flex !important;
 }
 
-#validation .col-xl-8,
-#validation .col-xl-4 {
-    display: block !important;
-}
-
 /* Tab Content Visibility Control */
 .tab-content {
     display: none !important;
