@@ -1305,9 +1305,9 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "src.validation_app:app-modern", 
+        "src.validation_app:app", 
         host="0.0.0.0", 
-        port=8080, 
+        port=8089, 
         reload=True,
         reload_dirs=["src"],
         log_level="info"

@@ -6,7 +6,7 @@ services:
     image: drs-validation:latest
     container_name: drs-validation-service
     ports:
-      - "8080:8080"
+      - "8089:8089"
     volumes:
       # Configuration files (can be edited by technicians)
       - ./src/config:/app/config
@@ -26,7 +26,7 @@ services:
       - PYTHONPATH=/app
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8089/health"]
       interval: 30s
       timeout: 10s
       retries: 3

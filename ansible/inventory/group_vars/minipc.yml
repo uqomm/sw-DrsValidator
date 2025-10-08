@@ -24,7 +24,7 @@ docker_image_tag: latest
 docker_container_name: "{{ app_name }}-service"
 
 # Network Configuration
-app_port: 8080
+app_port: 8089
 
 # Device Configuration (DMU/DRU)
 device_config:
