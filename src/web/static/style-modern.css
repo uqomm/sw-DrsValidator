@@ -483,6 +483,15 @@ body {
     overflow-x: auto;
 }
 
+/* Result view visibility control */
+.results-view-hidden {
+    display: none !important;
+}
+
+.results-view-visible {
+    display: block !important;
+}
+
 /* Print Styles */
 @media print {
     .no-print {

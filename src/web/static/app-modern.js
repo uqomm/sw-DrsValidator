@@ -192,6 +192,8 @@ class DRSValidatorUI {
         // Load results when switching to results tab
         if (tabId === 'results') {
             this.loadPreviousResults();
+            // Ensure proper initial state
+            this.ensureResultsInitialState();
         }
         
         this.currentTab = tabId;
@@ -800,9 +802,16 @@ class DRSValidatorUI {
     }
     
     showResultDetail(data) {
-        // Hide the results list and show the detail view
-        document.getElementById('resultsListView').style.display = 'none';
-        document.getElementById('resultDetailView').style.display = 'block';
+        // Hide the results list and show the detail view using CSS classes
+        const resultsListView = document.getElementById('resultsListView');
+        const resultDetailView = document.getElementById('resultDetailView');
+        
+        resultsListView.classList.add('results-view-hidden');
+        resultsListView.classList.remove('results-view-visible');
+        
+        resultDetailView.classList.remove('results-view-hidden');
+        resultDetailView.classList.add('results-view-visible');
+        resultDetailView.style.display = 'block';
         
         // Update breadcrumbs
         this.updateBreadcrumbs(data);
@@ -950,11 +959,38 @@ class DRSValidatorUI {
     }
     
     showResultsList() {
-        // Show the results list and hide the detail view
-        document.getElementById('resultsListView').style.display = 'block';
-        document.getElementById('resultDetailView').style.display = 'none';
+        // Show the results list and hide the detail view using CSS classes
+        const resultsListView = document.getElementById('resultsListView');
+        const resultDetailView = document.getElementById('resultDetailView');
+        
+        resultsListView.classList.remove('results-view-hidden');
+        resultsListView.classList.add('results-view-visible');
+        resultsListView.style.display = 'block';
+        
+        resultDetailView.classList.add('results-view-hidden');
+        resultDetailView.classList.remove('results-view-visible');
         
         // Reset breadcrumbs to show only historial
+        this.resetBreadcrumbs();
+    }
+    
+    ensureResultsInitialState() {
+        // Make sure we start with the list view visible and detail view hidden
+        const resultsListView = document.getElementById('resultsListView');
+        const resultDetailView = document.getElementById('resultDetailView');
+        
+        if (resultsListView) {
+            resultsListView.classList.remove('results-view-hidden');
+            resultsListView.classList.add('results-view-visible');
+            resultsListView.style.display = 'block';
+        }
+        
+        if (resultDetailView) {
+            resultDetailView.classList.add('results-view-hidden');
+            resultDetailView.classList.remove('results-view-visible');
+        }
+        
+        // Reset breadcrumbs
         this.resetBreadcrumbs();
     }
     
