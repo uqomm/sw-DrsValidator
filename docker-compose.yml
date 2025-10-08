@@ -6,7 +6,7 @@ services:
     image: drs-validation:latest
     container_name: drs-validation-service
     ports:
-      - "8089:8080"
+      - "8080:8080"
     volumes:
       # Configuration files (can be edited by technicians)
       - ./src/config:/app/config
