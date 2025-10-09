@@ -187,10 +187,26 @@ export PYTHONPATH="$(pwd)/src"
 
 ### planning/
 Contiene archivos de planificación, Jira y APIs:
-- `setup_jira_simple.sh` - Script de configuración Jira
+- `jira_manager.py` - ✅ **Script consolidado para gestión completa de Jira**
+- `setup_jira_simple.sh` - Script de configuración inicial Jira
 - `jira_issues_created.txt` - Lista de issues creados
 - `REFACTOR_PLAN*.md` - Planes de refactorización
 - `test_api.ps1` - Scripts de prueba de API
+
+### Gestión de Jira con jira_manager.py
+
+El script `jira_manager.py` es la herramienta unificada para todas las operaciones de Jira:
+
+```bash
+# Script wrapper (recomendado - funciona desde cualquier directorio)
+./jira test-connection
+./jira create-task --type google-drive
+./jira add-comment --issue SWDM-19 --comment "Comentario"
+
+# O directamente con Python
+python jira_manager.py test-connection
+python jira_manager.py create-task --type google-drive
+```
 
 ## 🤝 Contribución
 
