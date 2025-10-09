@@ -104,7 +104,7 @@ async def generate_simulated_validation_results(request: Dict[str, Any]):
     await asyncio.sleep(0.5)
     
     # Determinar tipo de comando basado en el escenario
-    if scenario_id == "master_test" or device_type.lower() == "master":
+    if scenario_id == "master_test" or scenario_id == "drs_master_batch" or device_type.lower() == "master":
         command_type = CommandType.MASTER
     elif scenario_id == "set_test" or device_type.lower() == "set":
         command_type = CommandType.SET
@@ -210,6 +210,7 @@ class ValidationResult(BaseModel):
 class BatchCommandsRequest(BaseModel):
     """Request model for batch commands validation"""
     ip_address: str
+    port: Optional[int] = 65050  # Puerto TCP para conexión
     command_type: str  # 'master' or 'remote'
     mode: str = "mock"  # 'mock' or 'live'
     selected_commands: Optional[List[str]] = None
@@ -418,10 +419,10 @@ async def run_validation_with_logging(client_id: str, request_data: Dict[str, An
         ip_address = device_config.get("ip_address", "N/A")
         
         # Mapear scenario_id a command_type
-        scenario_id = device_config.get("scenario_id", "remote_test")
-        if scenario_id == "master_test":
+        scenario_id = device_config.get("scenario_id", "batch_remote_commands")
+        if scenario_id == "master_test" or scenario_id == "drs_master_batch":
             command_type_str = "master"
-        elif scenario_id == "remote_test":
+        elif scenario_id == "remote_test" or scenario_id == "batch_remote_commands":
             command_type_str = "remote"
         else:
             # Fallback: intentar usar command_type directamente si existe
@@ -455,6 +456,7 @@ async def run_validation_with_logging(client_id: str, request_data: Dict[str, An
         # Ejecutar validación de forma asíncrona con logs en tiempo real
         result = await validator.validate_batch_commands_async(
             ip_address=ip_address,
+            port=device_config.get("port", 65050),
             command_type=command_type,
             mode=mode,
             selected_commands=None  # None means all commands
@@ -630,13 +632,16 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
         scenario_id = request["scenario_id"]
         device_type_mapping = {
             "remote_test": "drs_remote",
-            "master_test": "drs_master"
+            "master_test": "drs_master",
+            "batch_remote_commands": "drs_remote",
+            "drs_master_batch": "drs_master"
         }
         
         # Build validation config
         validation_config = {
             "device_type": device_type_mapping.get(scenario_id, "dmu_ethernet"),
             "ip_address": request["ip_address"],
+            "port": request.get("port", 65050),  # Puerto TCP, default 65050
             "hostname": request["hostname"],
             "mode": request["mode"]
         }
@@ -646,13 +651,14 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
             validation_config.update(request["thresholds"])
         
         # Execute validation
-        if scenario_id == "remote_test":
+        if scenario_id == "remote_test" or scenario_id == "batch_remote_commands":
             # Special handling for remote test scenario
             if BATCH_VALIDATION_AVAILABLE:
                 try:
                     validator = BatchCommandsValidator()
                     batch_result = validator.validate_batch_commands(
                         ip_address=validation_config["ip_address"],
+                        port=validation_config.get("port", 65050),
                         command_type=CommandType.REMOTE,
                         mode=validation_config["mode"],
                         selected_commands=None  # None means all remote commands
@@ -716,13 +722,14 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
                     "duration_ms": 0,
                     "timestamp": datetime.now().isoformat()
                 }
-        elif scenario_id == "master_test":
+        elif scenario_id == "master_test" or scenario_id == "drs_master_batch":
             # Special handling for master test scenario
             if BATCH_VALIDATION_AVAILABLE:
                 try:
                     validator = BatchCommandsValidator()
                     batch_result = validator.validate_batch_commands(
                         ip_address=validation_config["ip_address"],
+                        port=validation_config.get("port", 65050),
                         command_type=CommandType.MASTER,
                         mode=validation_config["mode"],
                         selected_commands=None  # None means all master commands
@@ -1042,6 +1049,7 @@ async def run_batch_commands(request: BatchCommandsRequest) -> BatchCommandsResp
         # Execute batch validation
         result = validator.validate_batch_commands(
             ip_address=request.ip_address,
+            port=request.port,
             command_type=command_type,
             mode=request.mode,
             selected_commands=request.selected_commands
