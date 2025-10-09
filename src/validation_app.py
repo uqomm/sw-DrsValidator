@@ -95,21 +95,21 @@ async def generate_simulated_validation_results(request: Dict[str, Any]):
     """
     import asyncio
     
-    scenario_id = request.get("scenario_id", "remote_test")
     device_config = request.get("device_config", {})
     ip_address = device_config.get("ip_address", "192.168.11.22")
-    device_type = device_config.get("device_type", "remote")
+    
+    # SIMPLIFICADO: Solo usar command_type directamente
+    command_type_str = device_config.get("command_type", "remote")
+    
+    # Validar que sea uno de los dos valores permitidos
+    if command_type_str not in ["master", "remote"]:
+        command_type_str = "remote"
     
     # Simular procesamiento breve
     await asyncio.sleep(0.5)
     
-    # Determinar tipo de comando basado en el escenario
-    if scenario_id == "master_test" or scenario_id == "drs_master_batch" or device_type.lower() == "master":
-        command_type = CommandType.MASTER
-    elif scenario_id == "set_test" or device_type.lower() == "set":
-        command_type = CommandType.SET
-    else:
-        command_type = CommandType.REMOTE
+    # Mapear a CommandType enum
+    command_type = CommandType.MASTER if command_type_str == "master" else CommandType.REMOTE
     
     # Ejecutar validación batch en modo mock
     validator = BatchCommandsValidator()
@@ -143,14 +143,13 @@ async def generate_simulated_validation_results(request: Dict[str, Any]):
         "overall_status": result["overall_status"],
         "message": f"Validation completed: {result['statistics']['passed']}/{result['statistics']['total_commands']} commands passed",
         "device_ip": ip_address,
-        "scenario": scenario_id,
+        "command_type": command_type_str,  # Usar command_type_str en lugar de scenario_id
         "mode": "mock",
         "timestamp": result["timestamp"],
         "tests": tests,
         "simulation": True,
         "total_duration_ms": result["duration_ms"],
-        "statistics": result["statistics"],
-        "command_type": command_type.value
+        "statistics": result["statistics"]
     })
 
 # FastAPI app instance
@@ -418,15 +417,12 @@ async def run_validation_with_logging(client_id: str, request_data: Dict[str, An
         device_config = request_data  # Use request_data directly as device_config
         ip_address = device_config.get("ip_address", "N/A")
         
-        # Mapear scenario_id a command_type
-        scenario_id = device_config.get("scenario_id", "batch_remote_commands")
-        if scenario_id == "master_test" or scenario_id == "drs_master_batch":
-            command_type_str = "master"
-        elif scenario_id == "remote_test" or scenario_id == "batch_remote_commands":
-            command_type_str = "remote"
-        else:
-            # Fallback: intentar usar command_type directamente si existe
-            command_type_str = device_config.get("command_type", "remote")
+        # SIMPLIFICADO: Solo usar command_type directamente
+        command_type_str = device_config.get("command_type", "remote")
+        
+        # Validar que sea uno de los dos valores permitidos
+        if command_type_str not in ["master", "remote"]:
+            command_type_str = "remote"  # Default seguro
         
         mode = request_data.get("mode", "mock")
         
@@ -467,8 +463,8 @@ async def run_validation_with_logging(client_id: str, request_data: Dict[str, An
             # Create ValidationRequest object from request_data
             device_config_obj = DeviceConfig(
                 ip_address=request_data.get("ip_address", "N/A"),
-                device_type=command_type_str,  # Use the mapped command_type
-                device_name=request_data.get("scenario_id", "Unknown"),
+                device_type=command_type_str,  # Usar command_type directamente
+                device_name=f"{command_type_str.upper()} Test",
                 serial_number=request_data.get("serial_number", "N/A"),
                 optical_port=request_data.get("port", 1)
             )
@@ -623,23 +619,25 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
         
         # Legacy approach (original logic) - keep for compatibility
         # Validate required fields
-        required_fields = ["scenario_id", "ip_address", "hostname", "mode"]
+        required_fields = ["command_type", "ip_address", "hostname", "mode"]
         for field in required_fields:
             if field not in request:
                 raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
         
-        # Get scenario details to determine device_type
-        scenario_id = request["scenario_id"]
-        device_type_mapping = {
-            "remote_test": "drs_remote",
-            "master_test": "drs_master",
-            "batch_remote_commands": "drs_remote",
-            "drs_master_batch": "drs_master"
-        }
+        # SIMPLIFICADO: Usar command_type directamente
+        command_type_str = request.get("command_type", "remote")
+        
+        # Validar que sea uno de los dos valores permitidos
+        if command_type_str not in ["master", "remote"]:
+            command_type_str = "remote"
+        
+        # Mapear a device_type (para compatibilidad con código antiguo)
+        device_type = "drs_master" if command_type_str == "master" else "drs_remote"
         
         # Build validation config
         validation_config = {
-            "device_type": device_type_mapping.get(scenario_id, "dmu_ethernet"),
+            "device_type": device_type,
+            "command_type": command_type_str,
             "ip_address": request["ip_address"],
             "port": request.get("port", 65050),  # Puerto TCP, default 65050
             "hostname": request["hostname"],
@@ -650,8 +648,8 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
         if "thresholds" in request:
             validation_config.update(request["thresholds"])
         
-        # Execute validation
-        if scenario_id == "remote_test" or scenario_id == "batch_remote_commands":
+        # Execute validation basado en command_type
+        if command_type_str == "remote":
             # Special handling for remote test scenario
             if BATCH_VALIDATION_AVAILABLE:
                 try:
@@ -722,7 +720,7 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
                     "duration_ms": 0,
                     "timestamp": datetime.now().isoformat()
                 }
-        elif scenario_id == "master_test" or scenario_id == "drs_master_batch":
+        elif command_type_str == "master":
             # Special handling for master test scenario
             if BATCH_VALIDATION_AVAILABLE:
                 try:
@@ -814,13 +812,13 @@ async def run_validation(request: Dict[str, Any], background_tasks: BackgroundTa
             }
         
         # Add request context to result
-        result["scenario_id"] = scenario_id
+        result["command_type"] = command_type_str
         result["mode"] = validation_config["mode"]
         
         return {
             "status": "success",
             "result": result,
-            "scenario_id": scenario_id,
+            "command_type": command_type_str,
             "mode": validation_config["mode"]
         }
         

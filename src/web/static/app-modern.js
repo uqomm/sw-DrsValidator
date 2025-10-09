@@ -313,7 +313,7 @@ class DRSValidatorUI {
     }
 
     validateForm(data) {
-        const requiredFields = ['scenario_id', 'ip_address', 'port', 'timeout'];
+        const requiredFields = ['command_type', 'ip_address', 'port', 'timeout'];
         const missingFields = requiredFields.filter(field => !data[field]);
         
         if (missingFields.length > 0) {
