@@ -1318,7 +1318,7 @@ class DRSValidatorUI {
             try {
                 const config = JSON.parse(saved);
                 document.getElementById('deviceIp').value = config.ip_address || '';
-                document.getElementById('devicePort').value = config.port || '502';
+                document.getElementById('devicePort').value = config.port || '65050';
                 document.getElementById('timeout').value = config.timeout || '10';
                 
                 this.showToast('info', '📋 Configuración cargada desde memoria');
