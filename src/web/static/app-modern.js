@@ -882,22 +882,37 @@ class DRSValidatorUI {
                                                 <th>#</th>
                                                 <th>Comando</th>
                                                 <th>Estado</th>
-                                                <th>Trama Enviada</th>
-                                                <th>Respuesta</th>
+                                                <th>Frame Hex</th>
+                                                <th>Respuesta Hex</th>
+                                                <th>Valores Decodificados</th>
                                                 <th>Duración</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             ${(result.results || []).map((test, index) => {
                                                 const decodedVals = test.decoded_values || {};
-                                                const decodedStr = JSON.stringify(decodedVals, null, 2);
+                                                const hasDecoded = Object.keys(decodedVals).length > 0;
+                                                
+                                                // Formatear valores decodificados
+                                                let decodedHtml = 'N/A';
+                                                if (hasDecoded) {
+                                                    decodedHtml = Object.entries(decodedVals)
+                                                        .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+                                                        .join('<br>');
+                                                }
+                                                
+                                                // Limpiar hexadecimales (quitar espacios si existen)
+                                                const frameHex = (test.details || 'N/A').replace(/\s+/g, '');
+                                                const responseHex = (test.response_data || 'N/A').replace(/\s+/g, '');
+                                                
                                                 return `
                                                 <tr>
                                                     <td>${index + 1}</td>
                                                     <td><code>${test.command || 'N/A'}</code></td>
                                                     <td><span class="badge bg-${test.status === 'PASS' ? 'success' : 'danger'}">${test.status}</span></td>
-                                                    <td><small><code>${test.details || 'N/A'}</code></small></td>
-                                                    <td><small><code>${test.response_data || 'N/A'}</code></small></td>
+                                                    <td><small><code class="text-primary">${frameHex}</code></small></td>
+                                                    <td><small><code class="text-info">${responseHex}</code></small></td>
+                                                    <td><small>${decodedHtml}</small></td>
                                                     <td>${test.duration_ms || 0}ms</td>
                                                 </tr>
                                             `}).join('')}
