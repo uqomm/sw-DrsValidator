@@ -268,6 +268,7 @@ def save_validation_result(result: Dict[str, Any], request: ValidationRequest) -
             "request": {
                 "ip_address": request.device_config.ip_address,
                 "device_type": request.device_config.device_type,
+                "command_type": request.device_config.device_type,  # Agregar command_type explícitamente
                 "hostname": request.device_config.device_name,
                 "serial_number": request.device_config.serial_number,
                 "live_mode": request.mode == "live"
@@ -415,10 +416,20 @@ async def run_validation_with_logging(client_id: str, request_data: Dict[str, An
         
         device_config = request_data  # Use request_data directly as device_config
         ip_address = device_config.get("ip_address", "N/A")
-        command_type_str = device_config.get("command_type", "remote")  # Use command_type as device_type
+        
+        # Mapear scenario_id a command_type
+        scenario_id = device_config.get("scenario_id", "remote_test")
+        if scenario_id == "master_test":
+            command_type_str = "master"
+        elif scenario_id == "remote_test":
+            command_type_str = "remote"
+        else:
+            # Fallback: intentar usar command_type directamente si existe
+            command_type_str = device_config.get("command_type", "remote")
+        
         mode = request_data.get("mode", "mock")
         
-        log_message = f"[INFO] 🚀 Iniciando validación {command_type_str} en {ip_address} (modo: {mode})"
+        log_message = f"[INFO] 🚀 Iniciando validación {command_type_str.upper()} en {ip_address} (modo: {mode})"
         if websocket_available:
             await manager.send_log(client_id, log_message)
         print(log_message)
@@ -454,7 +465,7 @@ async def run_validation_with_logging(client_id: str, request_data: Dict[str, An
             # Create ValidationRequest object from request_data
             device_config_obj = DeviceConfig(
                 ip_address=request_data.get("ip_address", "N/A"),
-                device_type=request_data.get("command_type", "remote"),  # Use command_type as device_type
+                device_type=command_type_str,  # Use the mapped command_type
                 device_name=request_data.get("scenario_id", "Unknown"),
                 serial_number=request_data.get("serial_number", "N/A"),
                 optical_port=request_data.get("port", 1)
