@@ -104,6 +104,29 @@ cd ansible/
 ansible-playbook -i inventory/hosts.yml playbooks/site.yml --limit minipc
 ```
 
+### Con Python Script (Alternativo)
+
+```bash
+# Despliegue rápido al servidor por defecto (192.168.60.140)
+python deploy.py
+
+# Despliegue personalizado con contraseña
+python deploy.py --host 192.168.11.22 --port 8089 --password mypass
+
+# Despliegue con clave SSH (recomendado)
+python deploy.py --host 192.168.60.140 --branch main
+
+# Ver qué comandos se ejecutarían (dry-run)
+python deploy.py --dry-run
+```
+
+**Características del script Python:**
+- ✅ Soporte para autenticación SSH con clave o contraseña
+- ✅ Configuración automática de puertos en docker-compose.yml
+- ✅ Verificación de conectividad y servicios
+- ✅ Manejo de errores y logging detallado
+- ✅ Modo dry-run para testing seguro
+
 ### Targets Soportados
 - **MiniPC (Producción)**: `192.168.60.140` - Para técnicos de campo
 - **Development (Local)**: `localhost` - Para desarrollo
