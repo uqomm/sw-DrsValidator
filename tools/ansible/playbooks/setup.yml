@@ -1,0 +1,78 @@
+---
+# DRS Validator - Server Initial Setup
+# Ejecutar UNA VEZ por servidor para configurar Docker, Git, etc.
+
+- name: DRS Server Initial Setup
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Display setup information
+      debug:
+        msg: |
+          ================================================
+          🚀 DRS Server Setup - {{ ansible_hostname }}
+          ================================================
+          Host: {{ ansible_host }}
+          User: {{ ansible_user }}
+          Hardware: {{ hardware_type | default('generic') }}
+          Memory: {{ memory_mb | default('unknown') }}MB
+          ================================================
+
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+          - git
+          - curl
+        state: present
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Verify Docker installation
+      command: docker --version
+      register: docker_version
+      changed_when: false
+
+    - name: Verify Git installation
+      command: git --version
+      register: git_version
+      changed_when: false
+
+    - name: Display setup completion
+      debug:
+        msg: |
+          ================================================
+          ✅ Setup completado exitosamente!
+          ================================================
+          Docker: {{ docker_version.stdout }}
+          Git: {{ git_version.stdout }}
+          Directory: {{ app_dir }}
+          User: {{ ansible_user }} (added to docker group)
+          ================================================
+          🚀 Ahora puedes usar: ansible-playbook deploy.yml
+          ================================================

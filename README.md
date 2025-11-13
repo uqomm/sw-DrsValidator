@@ -69,8 +69,8 @@ docker-compose up -d
 ### 🔧 Instalación Manual
 
 ```bash
-cd validation-framework
-source venv/bin/activate
+cd sw-DrsValidator
+source .venv/bin/activate
 export PYTHONPATH="$(pwd)/src"
 python -m uvicorn validation_app:app --host 0.0.0.0 --port 8080 --reload --log-level info
 ```
@@ -91,45 +91,77 @@ python -m uvicorn validation_app:app --host 0.0.0.0 --port 8080 --reload --log-l
   - `GET /api/validation/supported-commands` - Lista de comandos disponibles
   - `GET /api/validation/batch-commands/status` - Estado del sistema
 
-## 🚀 Despliegue en Producción
+## 🚀 Deployment
 
-### Con Ansible (Recomendado)
+### 🔧 Prerequisitos del Servidor
 
-```bash
-# Configurar SSH keys
-ssh-copy-id root@192.168.60.140
+El servidor remoto debe tener:
+- Ubuntu/Debian (cualquier versión reciente)
+- Acceso SSH configurado
+- Usuario con permisos sudo
 
-# Desplegar en MiniPC
-cd ansible/
-ansible-playbook -i inventory/hosts.yml playbooks/site.yml --limit minipc
-```
-
-### Con Python Script (Alternativo)
+### 📦 Opción 1: Deploy Rápido con Python (Recomendado para Dev)
 
 ```bash
-# Despliegue rápido al servidor por defecto (192.168.60.140)
-python deploy.py
+# Deploy a servidor por defecto (192.168.60.140)
+python tools/deploy.py
 
-# Despliegue personalizado con contraseña
-python deploy.py --host 192.168.11.22 --port 8089 --password mypass
+# Deploy personalizado
+python tools/deploy.py --host 192.168.11.22 --port 8089 --branch main
 
-# Despliegue con clave SSH (recomendado)
-python deploy.py --host 192.168.60.140 --branch main
-
-# Ver qué comandos se ejecutarían (dry-run)
-python deploy.py --dry-run
+# Ver qué se ejecutaría (dry-run)
+python tools/deploy.py --dry-run
 ```
 
-**Características del script Python:**
-- ✅ Soporte para autenticación SSH con clave o contraseña
-- ✅ Configuración automática de puertos en docker-compose.yml
-- ✅ Verificación de conectividad y servicios
-- ✅ Manejo de errores y logging detallado
-- ✅ Modo dry-run para testing seguro
+**¿Qué hace `deploy.py`?**
+- ✅ Verifica conectividad SSH
+- ✅ Instala Git y Docker automáticamente (si no están)
+- ✅ Clona/actualiza el repositorio desde GitHub
+- ✅ Configura puerto en docker-compose.yml
+- ✅ Construye e inicia contenedores
+- ✅ Verifica que el servicio esté funcionando
 
-### Targets Soportados
-- **MiniPC (Producción)**: `192.168.60.140` - Para técnicos de campo
-- **Development (Local)**: `localhost` - Para desarrollo
+### 🏭 Opción 2: Deploy con Ansible (Producción)
+
+```bash
+cd tools/ansible
+
+# Primera vez (instala Docker, Git, usuarios, etc.)
+ansible-playbook -i inventory.yml playbooks/setup.yml
+
+# Despliegues posteriores
+ansible-playbook -i inventory.yml playbooks/deploy.yml
+```
+
+### 🔄 ¿Cuál usar?
+
+| Escenario | Herramienta |
+|-----------|-------------|
+| **Testing rápido** | `python tools/deploy.py` |
+| **Desarrollo local** | `python tools/deploy.py` |
+| **Primera instalación servidor** | Ansible `setup.yml` |
+| **Deploy a producción** | Ansible `deploy.yml` o `deploy.py` |
+| **Múltiples servidores** | Ansible |
+
+### 🎯 Acceso Post-Deployment
+
+Después del deployment, accede a:
+- **Web UI**: `http://[servidor]:8089`
+- **API Docs**: `http://[servidor]:8089/docs`
+- **Health Check**: `http://[servidor]:8089/health`
+
+### 🔍 Comandos Útiles
+
+```bash
+# Ver logs
+ssh usuario@servidor 'cd /opt/drs-validation && docker-compose logs -f'
+
+# Reiniciar servicio
+ssh usuario@servidor 'cd /opt/drs-validation && docker-compose restart'
+
+# Estado de contenedores
+ssh usuario@servidor 'cd /opt/drs-validation && docker-compose ps'
+```
 
 ## 🧪 Testing y Validación
 

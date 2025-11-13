@@ -1,22 +1,65 @@
-# DRS Validation Framework - Ansible Deployment
+# DRS Validator - Ansible Deployment
 
-Esta carpeta contiene la infraestructura de automatización con Ansible para desplegar el DRS Validation Framework en equipos MiniPC para uso en campo.
+Herramientas de automatización para despliegue de DRS Validator usando Ansible.
 
-## 📋 Estructura
+## 🚀 Quick Start
+
+### Primera vez (setup del servidor):
+```bash
+cd tools/ansible
+ansible-playbook -i inventory.yml playbooks/setup.yml
+```
+
+### Despliegues posteriores:
+```bash
+ansible-playbook -i inventory.yml playbooks/deploy.yml
+
+# Con branch específica
+ansible-playbook -i inventory.yml playbooks/deploy.yml -e "git_branch=feature/ui-fixes"
+
+# Con puerto específico
+ansible-playbook -i inventory.yml playbooks/deploy.yml -e "app_port=8090"
+```
+
+## 📊 ¿Cuándo usar cada herramienta?
+
+| Situación | Herramienta |
+|-----------|-------------|
+| **Primera instalación servidor** | `ansible-playbook setup.yml` |
+| **Desarrollo/testing rápido** | `python tools/deploy.py` |
+| **Deploy a producción** | `ansible-playbook deploy.yml` |
+| **Múltiples servidores** | Ansible |
+
+## 🎯 Targets Disponibles
+
+- **minipc**: Servidor de producción (192.168.60.140)
+- **development**: Entorno local (localhost)
+
+## 📁 Estructura
 
 ```
-ansible/
-├── inventory/
-│   └── hosts.yml              # Configuración de hosts (MiniPC, desarrollo)
+tools/ansible/
+├── ansible.cfg          # Configuración Ansible
+├── inventory.yml        # Definición de servidores
 ├── playbooks/
-│   ├── site.yml              # Playbook principal - orquestación completa
-│   ├── system-preparation.yml # Preparación del sistema y usuarios
-│   ├── app-deployment.yml     # Despliegue de aplicación Docker
-│   └── templates/
-│       ├── docker-compose.yml.j2 # Template Docker Compose
-│       └── app.env.j2            # Variables de entorno
-└── README.md                 # Esta documentación
+│   ├── setup.yml        # Setup inicial del servidor
+│   └── deploy.yml       # Despliegue de aplicación
+└── README.md           # Esta documentación
 ```
+
+## 🔧 Requisitos
+
+- Ansible 2.9+
+- SSH configurado para acceso a servidores
+- Usuario con permisos sudo en servidores remotos
+
+## 📞 Troubleshooting
+
+### Problemas comunes:
+- **SSH Connection**: Verificar que las llaves SSH estén configuradas
+- **Docker Build**: Revisar logs con `docker-compose logs`
+- **Port Conflicts**: Asegurar que el puerto esté disponible
+- **Permissions**: Verificar permisos en el directorio de la aplicación
 
 ## 🚀 Despliegue Rápido
 

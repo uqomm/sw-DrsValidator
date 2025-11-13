@@ -90,6 +90,29 @@ class DRSDeployer:
         """Step 1: Check SSH connectivity"""
         return self.run_remote_command("echo 'SSH OK'", "Verificando conectividad SSH")
 
+    def check_git_installation(self):
+        """Step 1.5: Check if Git is installed on remote"""
+        result = self.run_remote_command(
+            "command -v git &> /dev/null && echo 'OK' || echo 'NOT_FOUND'",
+            "Verificando instalación de Git"
+        )
+        if result == "OK":
+            self.log("✅ Git instalado", Colors.GREEN)
+            return True
+        else:
+            self.log("⚠️  Git no está instalado. Instalando...", Colors.YELLOW)
+            # Instalar Git automáticamente
+            install_result = self.run_remote_command(
+                "apt-get update && apt-get install -y git",
+                "Instalando Git"
+            )
+            if install_result:
+                self.log("✅ Git instalado correctamente", Colors.GREEN)
+                return True
+            else:
+                self.log("❌ Error instalando Git", Colors.RED)
+                return False
+
     def check_docker_installation(self):
         """Step 2: Check if Docker is installed"""
         result = self.run_remote_command(
@@ -101,6 +124,19 @@ class DRSDeployer:
             return True
         else:
             self.log("❌ Docker no está instalado en el servidor remoto", Colors.RED)
+            return False
+
+    def check_docker_compose(self):
+        """Step 2.5: Check if docker-compose is available"""
+        result = self.run_remote_command(
+            "docker compose version &> /dev/null && echo 'OK' || docker-compose --version &> /dev/null && echo 'OK' || echo 'NOT_FOUND'",
+            "Verificando docker-compose"
+        )
+        if result == "OK":
+            self.log("✅ docker-compose disponible", Colors.GREEN)
+            return True
+        else:
+            self.log("❌ docker-compose no está disponible", Colors.RED)
             return False
 
     def update_repository(self):
@@ -154,26 +190,32 @@ class DRSDeployer:
         self.log("✅ Servicio listo", Colors.GREEN)
 
     def verify_deployment(self):
-        """Step 8: Verify deployment"""
+        """Step 8: Verify deployment with multiple checks"""
         script = [
             f"cd {self.remote_dir}",
             f"docker-compose ps"
         ]
         self.run_remote_script(script, "Verificando estado de contenedores")
 
-        # Test service response
+        # Test service response with multiple endpoints
         if not self.dry_run:
-            try:
-                response = requests.get(f"http://{self.host}:{self.port}/api/test", timeout=10)
-                if "success" in response.text.lower():
-                    self.log("✅ Servicio funcionando correctamente", Colors.GREEN)
-                    return True
-                else:
-                    self.log("⚠️  Servicio responde pero puede no estar listo", Colors.YELLOW)
-                    return True
-            except requests.RequestException:
-                self.log("⚠️  Servicio puede no estar respondiendo correctamente", Colors.YELLOW)
-                return False
+            endpoints = [
+                f"http://{self.host}:{self.port}/api/test",
+                f"http://{self.host}:{self.port}/health",
+                f"http://{self.host}:{self.port}/"
+            ]
+
+            for endpoint in endpoints:
+                try:
+                    response = requests.get(endpoint, timeout=10)
+                    if response.status_code == 200:
+                        self.log(f"✅ Servicio funcionando: {endpoint}", Colors.GREEN)
+                        return True
+                except requests.RequestException:
+                    continue
+
+            self.log("⚠️  Servicio puede no estar respondiendo correctamente", Colors.YELLOW)
+            return False
         return True
 
     def show_logs(self):
@@ -216,7 +258,9 @@ class DRSDeployer:
 
         steps = [
             self.check_ssh_connectivity,
+            self.check_git_installation,
             self.check_docker_installation,
+            self.check_docker_compose,
             self.update_repository,
             self.configure_port,
             self.stop_containers,

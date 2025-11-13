@@ -1,0 +1,30 @@
+---
+# DRS Validator - Ansible Inventory
+# Configuración unificada para todos los entornos
+
+all:
+  vars:
+    ansible_user: sigmadev
+    ansible_become: true
+    ansible_become_method: sudo
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+    # Application Configuration
+    app_port: 8089
+    app_dir: /opt/drs-validation
+    git_repo: https://github.com/arturoSigmadev/sw-DrsValidator.git
+    git_branch: main
+
+  hosts:
+    minipc:
+      ansible_host: 192.168.60.140
+      hardware_type: raspberry_pi
+      memory_mb: 4096
+      cpu_cores: 4
+
+    development:
+      ansible_host: localhost
+      ansible_connection: local
+      ansible_become: false
+      app_port: 8080
