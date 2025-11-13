@@ -1,5 +1,5 @@
 # DRS Validation Tool - Docker Container
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # Set maintainer info
 LABEL maintainer="DRS Monitoring Team"
