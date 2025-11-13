@@ -23,7 +23,9 @@ class ValidationScenarios:
         """Cargar escenarios desde archivo YAML."""
         try:
             with open(self.config_file, 'r', encoding='utf-8') as f:
-                return yaml.safe_load(f)
+                data = yaml.safe_load(f)
+                # Si el archivo está vacío, yaml.safe_load retorna None
+                return data if data else self._get_default_scenarios()
         except FileNotFoundError:
             # Devolver configuraciones por defecto basadas en launch.json
             return self._get_default_scenarios()
