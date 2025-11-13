@@ -1,236 +1,357 @@
-# DRS Validation Test Suite
+# DRS Validator Test Suite
 
-Suite completa de pruebas para el sistema de validación DRS.
+Comprehensive test suite for the DRS validation system using pytest framework.
 
-## 📋 Características
+## 📋 Test Structure
 
-- ✅ Tests automatizados para comandos Master, Remote y Set
-- ✅ Soporte para modo Mock y Live
-- ✅ Validación de tramas hexadecimales reales
-- ✅ Test de WebSocket logging en tiempo real
-- ✅ Generación de reportes JSON
-- ✅ Output colorizado y detallado
-- ✅ Selección de tests individuales o suite completa
+The test suite is organized into multiple specialized test files:
 
-## 🚀 Uso Rápido
+```
+tests/
+├── test_comprehensive.py      # Core validation logic tests
+├── test_deployment.py         # Deployment tools and scripts tests
+├── test_configuration.py      # Configuration management tests
+├── test_e2e.py               # End-to-end workflow tests
+├── test_set_commands_integration.py  # SET commands integration tests
+├── README.md                 # This documentation
+└── __pycache__/              # Python cache files
+```
 
-### Ejecutar todos los tests (mock)
+### Test Categories
+
+| Test File | Purpose | Coverage |
+|-----------|---------|----------|
+| `test_comprehensive.py` | Core validation logic, hex frames, decoders | Unit tests for BatchCommandsValidator |
+| `test_deployment.py` | Deployment scripts, SSH, Docker operations | Tools/deploy.py functionality |
+| `test_configuration.py` | YAML config loading, scenario management | Configuration system validation |
+| `test_e2e.py` | Complete API workflows, integration tests | End-to-end validation flows |
+| `test_set_commands_integration.py` | SET commands validation | Command type integration |
+
+## 🚀 Quick Start
+
+### Run All Tests
 ```bash
-python tests/test_drs_validation_suite.py
+# From project root
+python -m pytest tests/ -v
+
+# With coverage report
+python -m pytest tests/ --cov=src --cov-report=html
 ```
 
-### Ejecutar test específico
+### Run Specific Test Files
 ```bash
-# Solo test Master
-python tests/test_drs_validation_suite.py --test master
+# Core validation tests
+python -m pytest tests/test_comprehensive.py -v
 
-# Solo test Remote
-python tests/test_drs_validation_suite.py --test remote
+# Deployment tests
+python -m pytest tests/test_deployment.py -v
 
-# Solo test API endpoint
-python tests/test_drs_validation_suite.py --test api
+# Configuration tests
+python -m pytest tests/test_configuration.py -v
 
-# Solo test WebSocket
-python tests/test_drs_validation_suite.py --test websocket
+# End-to-end tests
+python -m pytest tests/test_e2e.py -v
+
+# SET commands tests
+python -m pytest tests/test_set_commands_integration.py -v
 ```
 
-### Tests con dispositivo real (modo live)
+### Run Tests by Category
 ```bash
-# Incluir tests live (requiere dispositivo DRS conectado)
-python tests/test_drs_validation_suite.py --live
+# Unit tests only
+python -m pytest tests/ -k "not e2e" -v
 
-# Solo tests live de Remote commands
-python tests/test_drs_validation_suite.py --test remote --live
+# Integration tests only
+python -m pytest tests/test_e2e.py tests/test_set_commands_integration.py -v
+
+# Fast tests (exclude slow integration tests)
+python -m pytest tests/ -m "not slow" -v
 ```
 
-### Output detallado
+## 📊 Test Coverage
+
+### Current Coverage Areas
+
+#### ✅ Core Validation (test_comprehensive.py)
+- Hex frame generation and validation
+- Command decoder mapping and integration
+- Batch validation in mock/live modes
+- Command type enum handling
+- Error handling and edge cases
+- Performance metrics tracking
+
+#### ✅ Deployment Tools (test_deployment.py)
+- DRSDeployer class initialization
+- SSH connectivity and command execution
+- Git installation and repository management
+- Docker operations and container management
+- Service verification and health checks
+- Deployment workflow orchestration
+
+#### ✅ Configuration Management (test_configuration.py)
+- YAML file parsing and validation
+- ValidationScenarios class functionality
+- Scenario retrieval and filtering
+- Configuration error handling
+- Default scenario fallbacks
+
+#### ✅ End-to-End Workflows (test_e2e.py)
+- Complete API endpoint validation
+- WebSocket logging integration
+- Result persistence and retrieval
+- Batch command processing workflows
+- Scenario-based validation flows
+- Error handling and edge cases
+
+#### ✅ SET Commands Integration (test_set_commands_integration.py)
+- Master SET commands validation
+- Remote SET commands validation
+- Command type differentiation
+- SET vs GET command handling
+
+## 🎯 Test Execution Modes
+
+### Development Mode
 ```bash
-# Ver todos los comandos y valores decodificados
-python tests/test_drs_validation_suite.py --verbose
+# Run tests with auto-reload during development
+python -m pytest tests/ -v --tb=short
 
-# Verbose + guardar reporte
-python tests/test_drs_validation_suite.py --verbose --save-report
+# Run failed tests only
+python -m pytest tests/ --lf
+
+# Run tests and stop on first failure
+python -m pytest tests/ -x
 ```
 
-### Servidor customizado
+### CI/CD Mode
 ```bash
-# Si el servidor está en otra URL
-python tests/test_drs_validation_suite.py --url http://192.168.1.100:8080
+# Run all tests with coverage for CI
+python -m pytest tests/ --cov=src --cov-report=xml --junitxml=results/test-results.xml
+
+# Run tests in parallel (if pytest-xdist installed)
+python -m pytest tests/ -n auto
 ```
 
-## 📊 Tipos de Tests
-
-### 1. Master Commands Mock
-Valida los 15 comandos DRS Master en modo simulación:
-- optical_port_devices_connected_1/2/3/4
-- input_and_output_power
-- channel_switch
-- channel_frequency_configuration
-- central_frequency_point
-- subband_bandwidth
-- broadband_switching
-- optical_port_switch
-- optical_port_status
-- temperature
-- device_id
-- datt
-
-### 2. Remote Commands Mock
-Valida los 13 comandos DRS Remote en modo simulación.
-
-### 3. Batch API Endpoint
-Valida el endpoint directo `/api/validation/batch-commands`.
-
-### 4. WebSocket Real-Time Logging
-Valida la funcionalidad de logging en tiempo real vía WebSocket.
-
-### 5. Live Validation (Opcional)
-Valida comandos contra un dispositivo DRS real conectado.
-
-## 📄 Reportes
-
-Los reportes se guardan en `reports/test_report_YYYYMMDD_HHMMSS.json` y contienen:
-
-```json
-{
-  "timestamp": "2025-10-07T12:30:45",
-  "total_tests": 4,
-  "passed": 4,
-  "failed": 0,
-  "duration_seconds": 12.5,
-  "tests": [
-    {
-      "test_name": "Master Commands Mock",
-      "success": true,
-      "details": {
-        "overall_status": "PASS",
-        "statistics": {
-          "total_commands": 15,
-          "passed": 15,
-          "failed": 0,
-          "success_rate": 100.0
-        }
-      }
-    }
-  ]
-}
-```
-
-## 🎨 Output de Ejemplo
-
-```
-======================================================================
-🚀 DRS Validation Test Suite
-======================================================================
-
-Servidor: http://localhost:8080
-Modo verbose: True
-Tests live: False
-
-======================================================================
-🧪 TEST 1: Master Commands (Mock Mode)
-======================================================================
-
-ℹ️  Enviando petición de validación Master...
-✅ Estado: PASS
-✅ Mensaje: Validation completed: 15/15 commands passed
-
-📈 Estadísticas:
-   • Total comandos: 15
-   • Exitosos: 15
-   • Fallidos: 0
-   • Timeouts: 0
-   • Tasa de éxito: 100.0%
-   • Duración promedio: 119.1ms
-
-📋 Comandos ejecutados (15):
-
-   1. ✅ Master Command: optical_port_devices_connected_1
-      📝 ✅ Mock validation successful
-      📤 Trama enviada: 7E070000F80000B2827E
-      📥 Respuesta: 7E0701009700020A00E8357E
-      🔍 Valores:
-         • optical_port_devices_connected_1: 3
-      ⏱️  113ms
-
-======================================================================
-📊 RESUMEN FINAL DE TESTS
-======================================================================
-Total de tests ejecutados: 4
-Tests exitosos: 4
-Tests fallidos: 0
-Tasa de éxito: 100.0%
-
-Detalles por test:
-   ✅ PASS - Master Commands Mock
-   ✅ PASS - Remote Commands Mock
-   ✅ PASS - Batch API Endpoint
-   ✅ PASS - WebSocket Logging
-
-⏱️  Duración total: 12.45s
-
-✅ 🎉 TODOS LOS TESTS PASARON
-```
-
-## 🔧 Requisitos
-
-- Python 3.8+
-- Servidor DRS Validator ejecutándose
-- Dependencias: requests, websockets
-
+### Debug Mode
 ```bash
-pip install requests websockets
+# Verbose output with captured logs
+python -m pytest tests/ -v -s
+
+# Debug specific test
+python -m pytest tests/test_comprehensive.py::TestBatchCommandsValidator::test_mock_decoder_integration -v -s
 ```
 
-## 📝 Notas
+## 📈 Coverage Analysis
 
-1. **Modo Mock**: No requiere dispositivo físico, usa respuestas simuladas
-2. **Modo Live**: Requiere dispositivo DRS conectado en 192.168.11.22:65050
-3. **WebSocket Test**: Verifica logging en tiempo real
-4. **Reportes**: Se guardan automáticamente con `--save-report`
+### Generate Coverage Reports
+```bash
+# HTML coverage report
+python -m pytest tests/ --cov=src --cov-report=html
+# View: open htmlcov/index.html
 
-## 🐛 Troubleshooting
+# Terminal coverage summary
+python -m pytest tests/ --cov=src --cov-report=term-missing
 
-### Test falla con "Connection refused"
-- Verifica que el servidor esté ejecutándose: `docker-compose -f docker-compose.dev.yml up`
-- Verifica la URL del servidor con `--url`
+# XML coverage for CI tools
+python -m pytest tests/ --cov=src --cov-report=xml
+```
 
-### Tests live fallan con timeout
-- Verifica que el dispositivo DRS esté conectado y accesible
-- Verifica la IP configurada (por defecto 192.168.11.22)
-- Aumenta el timeout en el código si es necesario
+### Coverage Goals
+- **Core Logic**: >95% coverage
+- **API Endpoints**: >90% coverage
+- **Error Handling**: >85% coverage
+- **Configuration**: >90% coverage
+- **Deployment**: >80% coverage
 
-### No se generan reportes
-- Verifica permisos de escritura en el directorio `reports/`
-- Usa el flag `--save-report` explícitamente
+## 🔧 Test Configuration
 
-## 👨‍💻 Desarrollo
+### Pytest Configuration
+Tests use standard pytest configuration with the following markers:
 
-Para agregar nuevos tests:
-
-1. Agrega un método `async def test_nuevo_test(self) -> bool` a la clase `DRSTestSuite`
-2. Llama al método desde `main()`
-3. El resultado se agregará automáticamente al resumen
-
-Ejemplo:
 ```python
-async def test_custom_validation(self) -> bool:
-    self.print_header("🧪 TEST: Custom Validation")
-    
-    # Tu código de test aquí
-    success = True  # o False según el resultado
-    
-    self.test_results.append({
-        'test_name': 'Custom Validation',
-        'success': success,
-        'details': {}
-    })
-    
-    return success
+@pytest.mark.slow  # Mark slow-running tests
+@pytest.mark.integration  # Mark integration tests
+@pytest.mark.e2e  # Mark end-to-end tests
 ```
 
-## 📚 Referencias
+### Test Fixtures
+Common test fixtures are available in `conftest.py` (when created):
 
-- [DRS Validator Documentation](../docs/README.md)
+- `test_client`: FastAPI test client
+- `mock_validator`: Mocked BatchCommandsValidator
+- `test_config`: Test configuration data
+- `temp_dir`: Temporary directory for file operations
+
+## 📋 Test Results and Reporting
+
+### Test Output
+```
+======================== 17 passed, 3 skipped in 45.67s ========================
+```
+
+### Understanding Results
+- **passed**: Tests that completed successfully
+- **failed**: Tests that failed with assertion errors
+- **skipped**: Tests skipped due to missing dependencies or conditions
+- **errors**: Tests that failed with exceptions
+
+### Common Test Failures
+
+#### Import Errors
+```
+ImportError: No module named 'fastapi'
+```
+**Solution**: Install test dependencies
+```bash
+pip install -r requirements.txt
+```
+
+#### Network Timeouts
+```
+ConnectionError: Connection timed out
+```
+**Solution**: Ensure test server is running or use mock mode
+
+#### File Permission Errors
+```
+PermissionError: [Errno 13] Permission denied
+```
+**Solution**: Check file permissions in test directories
+
+## 🛠️ Test Maintenance
+
+### Adding New Tests
+
+#### Unit Test Pattern
+```python
+class TestNewFeature(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures"""
+        self.test_data = {"key": "value"}
+
+    def test_feature_functionality(self):
+        """Test specific functionality"""
+        result = some_function(self.test_data)
+        self.assertEqual(result, expected_value)
+```
+
+#### Integration Test Pattern
+```python
+class TestFeatureIntegration(unittest.TestCase):
+    def setUp(self):
+        """Set up integration test fixtures"""
+        self.client = TestClient(app)
+
+    def test_api_endpoint_integration(self):
+        """Test complete API workflow"""
+        response = self.client.post("/api/endpoint", json=test_data)
+        self.assertEqual(response.status_code, 200)
+```
+
+### Test Organization Guidelines
+
+1. **One concept per test**: Each test should validate one specific behavior
+2. **Descriptive names**: Use `test_feature_condition_expected_result` format
+3. **Independent tests**: Tests should not depend on each other
+4. **Fast execution**: Keep unit tests under 100ms, integration under 1s
+5. **Proper cleanup**: Use `setUp`/`tearDown` or context managers
+
+### Mocking Guidelines
+
+```python
+from unittest.mock import patch, MagicMock
+
+@patch('module.Class.method')
+def test_with_mock(self, mock_method):
+    mock_method.return_value = expected_value
+    # Test code here
+```
+
+## 🔍 Debugging Tests
+
+### Debug Failed Tests
+```bash
+# Run with detailed traceback
+python -m pytest tests/test_file.py::TestClass::test_method -v --tb=long
+
+# Debug with pdb
+python -m pytest tests/test_file.py::TestClass::test_method -v --pdb
+
+# Print all variables on failure
+python -m pytest tests/ -v --tb=short --capture=no
+```
+
+### Common Debug Scenarios
+
+#### API Test Failures
+```python
+# Check API response details
+response = self.client.get("/api/endpoint")
+print(f"Status: {response.status_code}")
+print(f"Response: {response.json()}")
+```
+
+#### Mock Verification
+```python
+# Verify mock was called correctly
+mock_method.assert_called_once_with(expected_arg)
+print(f"Call args: {mock_method.call_args}")
+```
+
+## � References
+
+- [DRS Validator Main Documentation](../docs/README.md)
 - [Batch Commands API Guide](../docs/BATCH_COMMANDS_API_GUIDE.md)
-- [Hex Frames Reference](../src/hex_frames.py)
+- [Deployment Documentation](../docs/GUIA_DEPLOYMENT.md)
+- [Configuration Guide](../docs/DOCUMENTACION_TECNICA.md)
+- [pytest Documentation](https://docs.pytest.org/)
+
+## 🤝 Contributing
+
+When adding new tests:
+
+1. Follow the existing naming conventions
+2. Add appropriate docstrings
+3. Include test cases for error conditions
+4. Update this README if adding new test categories
+5. Ensure tests run in CI/CD pipeline
+
+### Test File Template
+```python
+#!/usr/bin/env python3
+"""
+Unit Tests for [Feature Name]
+
+Tests [specific functionality] including:
+- [Feature 1]
+- [Feature 2]
+- [Feature 3]
+"""
+
+import unittest
+import sys
+from pathlib import Path
+
+# Add src to path for imports
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root / "src"))
+
+class TestFeatureName(unittest.TestCase):
+    """Test suite for [Feature Name] functionality"""
+
+    def setUp(self):
+        """Set up test fixtures"""
+        pass
+
+    def test_feature_behavior(self):
+        """Test [specific behavior]"""
+        pass
+
+def run_tests():
+    """Run test suite"""
+    # Test execution code here
+    pass
+
+if __name__ == "__main__":
+    run_tests()
+```
