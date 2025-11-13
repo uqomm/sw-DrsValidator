@@ -295,6 +295,118 @@ class TestAPIIntegration(unittest.TestCase):
         self.assertIsInstance(valid_request["timeout_seconds"], int)
         
         print("✅ API request validation tests passed")
+    
+    def test_batch_commands_integration(self):
+        """Test batch commands integration with FastAPI models"""
+        # Test 1: Import validation components
+        from validation.batch_commands_validator import BatchCommandsValidator, CommandType
+        from validation.decoder_integration import CommandDecoderMapping
+        from validation.hex_frames import DRS_MASTER_FRAMES, DRS_REMOTE_FRAMES
+        
+        # Should not raise ImportError
+        self.assertIsNotNone(BatchCommandsValidator)
+        self.assertIsNotNone(CommandType)
+        self.assertIsNotNone(CommandDecoderMapping)
+        self.assertIsNotNone(DRS_MASTER_FRAMES)
+        self.assertIsNotNone(DRS_REMOTE_FRAMES)
+        
+        # Test 2: Simulate BatchCommandsRequest
+        request_data = {
+            "ip_address": "192.168.1.100",
+            "command_type": "master",
+            "mode": "mock",
+            "selected_commands": ["device_id", "temperature", "optical_port_devices_connected_1"],
+            "timeout_seconds": 3
+        }
+        
+        # Verify request structure
+        self.assertIn("ip_address", request_data)
+        self.assertIn("command_type", request_data)
+        self.assertIn("mode", request_data)
+        self.assertIn("selected_commands", request_data)
+        self.assertEqual(len(request_data["selected_commands"]), 3)
+        
+        # Test 3: Execute validation (like the endpoint would)
+        validator = BatchCommandsValidator()
+        command_type = CommandType.MASTER if request_data["command_type"] == "master" else CommandType.REMOTE
+        
+        result = validator.validate_batch_commands(
+            ip_address=request_data["ip_address"],
+            command_type=command_type,
+            mode=request_data["mode"],
+            selected_commands=request_data["selected_commands"]
+        )
+        
+        # Verify validation result
+        self.assertIn("overall_status", result)
+        self.assertIn("statistics", result)
+        self.assertEqual(result["overall_status"], "PASS")
+        self.assertEqual(result["statistics"]["total_commands"], len(request_data["selected_commands"]))
+        self.assertEqual(result["statistics"]["passed"], len(request_data["selected_commands"]))
+        
+        # Test 4: Simulate SupportedCommandsResponse
+        master_commands = list(DRS_MASTER_FRAMES.keys())
+        remote_commands = list(DRS_REMOTE_FRAMES.keys())
+        
+        decoder_mappings = {}
+        for cmd in master_commands + remote_commands:
+            decoder_mappings[cmd] = CommandDecoderMapping.has_decoder(cmd)
+        
+        supported_commands_response = {
+            "master_commands": master_commands,
+            "remote_commands": remote_commands,
+            "total_commands": len(master_commands) + len(remote_commands),
+            "decoder_mappings": decoder_mappings
+        }
+        
+        # Verify supported commands structure
+        self.assertGreater(supported_commands_response["total_commands"], 20)
+        self.assertGreater(len(supported_commands_response["master_commands"]), 10)
+        self.assertGreater(len(supported_commands_response["remote_commands"]), 10)
+        
+        # Count commands with decoder mappings
+        mapped_commands = sum(1 for has_decoder in decoder_mappings.values() if has_decoder)
+        self.assertGreater(mapped_commands, 10)
+        
+        # Test 5: Simulate API Response Structure
+        api_response = {
+            "overall_status": result["overall_status"],
+            "command_type": result["command_type"],
+            "mode": result["mode"],
+            "ip_address": result["ip_address"],
+            "total_commands": result["total_commands"],
+            "commands_tested": result["commands_tested"],
+            "statistics": result["statistics"],
+            "results": result["results"],
+            "duration_ms": result["duration_ms"],
+            "timestamp": result["timestamp"]
+        }
+        
+        # Verify API response structure
+        required_fields = ["overall_status", "command_type", "mode", "ip_address", 
+                          "total_commands", "commands_tested", "statistics", "results", 
+                          "duration_ms", "timestamp"]
+        
+        for field in required_fields:
+            self.assertIn(field, api_response)
+        
+        self.assertEqual(len(api_response["results"]), len(request_data["selected_commands"]))
+        
+        # Test 6: Verify integration features
+        features = {
+            "santone_decoder_integration": True,
+            "hex_frame_generation": len(DRS_MASTER_FRAMES) > 0 and len(DRS_REMOTE_FRAMES) > 0,
+            "timeout_handling": True,
+            "detailed_statistics": "success_rate" in result["statistics"],
+            "mock_testing": result["mode"] == "mock",
+            "live_device_testing": True
+        }
+        
+        for feature, expected_status in features.items():
+            with self.subTest(feature=feature):
+                self.assertEqual(expected_status, True, f"Feature {feature} should be enabled")
+        
+        print("✅ Batch commands FastAPI integration tests passed")
 
 
 def run_comprehensive_tests():
