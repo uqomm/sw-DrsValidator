@@ -25,16 +25,16 @@ def test_master_set_commands():
 
     print(f"\n✅ Estado: {result['overall_status']}")
     print(f"📊 Total comandos: {result['statistics']['total_commands']}")
-    print(f"🔍 Comandos GET: {len([c for c in result['results'] if not (c.command.startswith('set_') or c.command.startswith('remote_set_'))])}")
-    print(f"⚙️ Comandos SET: {len([c for c in result['results'] if c.command.startswith('set_') or c.command.startswith('remote_set_')])}")
+    print(f"🔍 Comandos GET: {len([c for c in result['results'] if not (c['command'].startswith('set_') or c['command'].startswith('remote_set_'))])}")
+    print(f"⚙️ Comandos SET: {len([c for c in result['results'] if c['command'].startswith('set_') or c['command'].startswith('remote_set_')])}")
     print(f"✅ Exitosos: {result['statistics']['passed']}")
     print(f"❌ Fallidos: {result['statistics']['failed']}")
 
     # Mostrar comandos SET específicamente
     print("\n📋 Comandos SET ejecutados:")
-    set_commands = [c for c in result['results'] if c.command.startswith('set_')]
+    set_commands = [c for c in result['results'] if c['command'].startswith('set_')]
     for cmd in set_commands:
-        print(f"  • {cmd.command}: {cmd.status.value}")
+        print(f"  • {cmd['command']}: {cmd['status']}")
 
     return result
 
@@ -55,11 +55,11 @@ def test_remote_set_commands():
 
     print(f"\n✅ Estado: {result['overall_status']}")
     print(f"📊 Total comandos: {result['statistics']['total_commands']}")
-    print(f"🔍 Comandos GET: {len([c for c in result['results'] if not (c.command.startswith('set_') or c.command.startswith('remote_set_'))])}")
-    print(f"⚙️ Comandos SET: {len([c for c in result['results'] if c.command.startswith('set_') or c.command.startswith('remote_set_')])}")
+    print(f"🔍 Comandos GET: {len([c for c in result['results'] if not (c['command'].startswith('set_') or c['command'].startswith('remote_set_'))])}")
+    print(f"⚙️ Comandos SET: {len([c for c in result['results'] if c['command'].startswith('set_') or c['command'].startswith('remote_set_')])}")
 
     # Verificar que NO hay comandos de canales
-    set_commands = [c.command for c in result['results'] if c.command.startswith('set_') or c.command.startswith('remote_set_')]
+    set_commands = [c['command'] for c in result['results'] if c['command'].startswith('set_') or c['command'].startswith('remote_set_')]
     print("\n📋 Comandos SET ejecutados:")
     for cmd_name in set_commands:
         print(f"  • {cmd_name}")

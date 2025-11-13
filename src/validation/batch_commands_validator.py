@@ -147,7 +147,8 @@ class BatchCommandsValidator:
         ip_address: str,
         command_type: CommandType,
         mode: str = "mock",
-        selected_commands: List[str] = None
+        selected_commands: List[str] = None,
+        port: int = 65050
     ) -> Dict[str, Any]:
         """
         Valida un batch de comandos DRS (versión síncrona).
@@ -157,6 +158,7 @@ class BatchCommandsValidator:
             command_type: Tipo de comandos (MASTER o REMOTE)
             mode: Modo de validación ("mock" o "live")  
             selected_commands: Lista específica de comandos (None = todos)
+            port: Puerto TCP para conexión (default: 65050)
             
         Returns:
             Diccionario con resultados de validación batch
@@ -165,7 +167,7 @@ class BatchCommandsValidator:
         
         # Obtener lista de comandos a probar
         if selected_commands:
-            commands = selected_commands
+            commands = self._build_commands_dict(selected_commands, command_type)
         else:
             commands = self._get_commands_for_type(command_type)
         
@@ -174,7 +176,7 @@ class BatchCommandsValidator:
             # ALWAYS use sync version - async will be called from validate_batch_commands_async
             results = self._execute_mock_batch(commands, command_type)
         else:
-            results = self._execute_live_batch(ip_address, commands, command_type)
+            results = self._execute_live_batch(ip_address, commands, command_type, port)
         
         # Calcular estadísticas
         total_duration = int((time.time() - start_time) * 1000)
@@ -198,7 +200,8 @@ class BatchCommandsValidator:
         ip_address: str,
         command_type: CommandType,
         mode: str = "mock",
-        selected_commands: List[str] = None
+        selected_commands: List[str] = None,
+        port: int = 65050
     ) -> Dict[str, Any]:
         """
         Valida un batch de comandos DRS (versión asíncrona con logs en tiempo real).
@@ -208,6 +211,7 @@ class BatchCommandsValidator:
             command_type: Tipo de comandos (MASTER o REMOTE)
             mode: Modo de validación ("mock" o "live")  
             selected_commands: Lista específica de comandos (None = todos)
+            port: Puerto TCP para conexión (default: 65050)
             
         Returns:
             Diccionario con resultados de validación batch
@@ -216,7 +220,7 @@ class BatchCommandsValidator:
         
         # Obtener lista de comandos a probar
         if selected_commands:
-            commands = selected_commands
+            commands = self._build_commands_dict(selected_commands, command_type)
         else:
             commands = self._get_commands_for_type(command_type)
         
@@ -225,7 +229,7 @@ class BatchCommandsValidator:
             results = await self._execute_mock_batch_async(commands, command_type)
         else:
             # Modo live con logs detallados en tiempo real
-            results = await self._execute_live_batch_async(ip_address, commands, command_type)
+            results = await self._execute_live_batch_async(ip_address, commands, command_type, port)
         
         # Calcular estadísticas
         total_duration = int((time.time() - start_time) * 1000)
@@ -274,6 +278,40 @@ class BatchCommandsValidator:
             commands.update(get_all_master_set_commands())
             commands.update(get_all_remote_set_commands())
             
+        return commands
+    
+    def _build_commands_dict(self, selected_commands: List[str], command_type: CommandType) -> Dict[str, str]:
+        """Construye diccionario de comandos a partir de lista seleccionada."""
+        from .hex_frames import (
+            get_master_command_frame, get_remote_command_frame,
+            get_master_set_command_frame, get_remote_set_command_frame
+        )
+        
+        commands = {}
+        
+        for cmd_name in selected_commands:
+            # Determinar si es comando SET
+            is_set_command = cmd_name.startswith('set_') or cmd_name.startswith('remote_set_')
+            
+            # Obtener trama según tipo de comando y dispositivo
+            frame = ""
+            if command_type == CommandType.MASTER:
+                if is_set_command:
+                    frame = get_master_set_command_frame(cmd_name)
+                else:
+                    frame = get_master_command_frame(cmd_name)
+            elif command_type == CommandType.REMOTE:
+                if is_set_command:
+                    frame = get_remote_set_command_frame(cmd_name)
+                else:
+                    frame = get_remote_command_frame(cmd_name)
+            else:
+                # Para tipo SET legacy, intentar ambos
+                frame = get_master_set_command_frame(cmd_name) or get_remote_set_command_frame(cmd_name)
+            
+            # Incluir el comando incluso si no tiene frame (dejará que el executor maneje el error)
+            commands[cmd_name] = frame or ""
+        
         return commands
     
     async def _execute_mock_batch_async(self, commands: Dict[str, str], command_type: CommandType) -> List[CommandTestResult]:
@@ -353,7 +391,7 @@ class BatchCommandsValidator:
         
         return results
     
-    async def _execute_live_batch_async(self, ip_address: str, commands: Dict[str, str], command_type: CommandType) -> List[CommandTestResult]:
+    async def _execute_live_batch_async(self, ip_address: str, commands: Dict[str, str], command_type: CommandType, port: int = 65050) -> List[CommandTestResult]:
         """
         Versión asíncrona de _execute_live_batch con logs detallados en tiempo real.
         
@@ -379,7 +417,8 @@ class BatchCommandsValidator:
                 self._execute_single_live_command,
                 ip_address,
                 cmd_name,
-                command_type
+                command_type,
+                port
             )
             
             results.append(result)
@@ -490,7 +529,7 @@ class BatchCommandsValidator:
         
         return results
     
-    def _execute_live_batch(self, ip_address: str, commands: Dict[str, str], command_type: CommandType) -> List[CommandTestResult]:
+    def _execute_live_batch(self, ip_address: str, commands: Dict[str, str], command_type: CommandType, port: int = 65050) -> List[CommandTestResult]:
         """
         Ejecuta validación batch en modo live (conexión real).
         
@@ -504,7 +543,7 @@ class BatchCommandsValidator:
         
         for i, (command, hex_frame) in enumerate(commands.items(), 1):
             self._log_sync(f"📤 Ejecutando comando {i}/{len(commands)}: {command}")
-            result = self._execute_single_live_command(ip_address, command, command_type)
+            result = self._execute_single_live_command(ip_address, command, command_type, port)
             results.append(result)
             
             # Log del resultado
@@ -524,7 +563,7 @@ class BatchCommandsValidator:
         
         return results
     
-    def _execute_single_live_command(self, ip_address: str, command: str, command_type: CommandType) -> CommandTestResult:
+    def _execute_single_live_command(self, ip_address: str, command: str, command_type: CommandType, port: int = 65050) -> CommandTestResult:
         """
         Ejecuta un comando individual en modo live.
         """
@@ -568,7 +607,7 @@ class BatchCommandsValidator:
                 )
             
             # Ejecutar comando via TCP
-            response = self._send_command_via_tcp(ip_address, frame)
+            response = self._send_command_via_tcp(ip_address, frame, port)
             duration = int((time.time() - start_time) * 1000)
             
             if response is None:
@@ -606,13 +645,14 @@ class BatchCommandsValidator:
                 error=str(e)
             )
     
-    def _send_command_via_tcp(self, ip_address: str, hex_frame: str) -> Optional[bytes]:
+    def _send_command_via_tcp(self, ip_address: str, hex_frame: str, port: int = 65050) -> Optional[bytes]:
         """
         Envía un comando hexadecimal via TCP al dispositivo DRS.
         
         Args:
             ip_address: IP del dispositivo
             hex_frame: Trama hexadecimal a enviar
+            port: Puerto TCP a usar (default: 65050)
             
         Returns:
             Respuesta del dispositivo o None si hay timeout/error
@@ -620,15 +660,15 @@ class BatchCommandsValidator:
         try:
             # Convertir trama hex a bytes
             frame_bytes = bytes.fromhex(hex_frame)
-            self._log_sync(f"🔌 Conectando a {ip_address}:65050")
+            self._log_sync(f"🔌 Conectando a {ip_address}:{port}")
             self._log_sync(f"📤 Enviando trama: {hex_frame}")
             
             # Crear socket TCP
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(self.socket_timeout)
             
-            # Conectar al puerto DRS (65050)
-            sock.connect((ip_address, 65050))
+            # Conectar al puerto especificado
+            sock.connect((ip_address, port))
             self._log_sync(f"✅ Conexión TCP establecida exitosamente")
             
             # Enviar comando

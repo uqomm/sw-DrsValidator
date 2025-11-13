@@ -249,6 +249,7 @@ async function runValidation() {
     const validationData = {
         scenario_id: formData.get('scenario_id'),
         ip_address: formData.get('ip_address'),
+        port: parseInt(formData.get('port')) || 65050,
         hostname: formData.get('hostname'),
         mode: formData.get('mode')
     };
@@ -338,6 +339,7 @@ async function runBatchCommandsForValidation(validationData) {
     // Prepare batch data
     const batchData = {
         ip_address: validationData.ip_address,
+        port: validationData.port || 65050,
         command_type: commandType,
         mode: validationData.mode
     };
