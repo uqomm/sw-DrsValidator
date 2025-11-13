@@ -36,7 +36,10 @@ def test_master_set_commands():
     for cmd in set_commands:
         print(f"  • {cmd['command']}: {cmd['status']}")
 
-    return result
+    # Assertions para pytest
+    assert result['overall_status'] == 'PASS', "Master validation should pass"
+    assert result['statistics']['total_commands'] > 0, "Should have commands"
+    assert len(set_commands) > 0, "Should have SET commands"
 
 def test_remote_set_commands():
     """Test de comandos SET para Remote (sin channel_frequencies y channel_activation)"""
@@ -78,19 +81,27 @@ def test_remote_set_commands():
     else:
         print("✅ Verificación: Remote NO tiene comandos de channel_activation (correcto)")
 
-    return result
+    # Assertions para pytest
+    assert result['overall_status'] == 'PASS', "Remote validation should pass"
+    assert result['statistics']['total_commands'] > 0, "Should have commands"
+    assert not has_channel_freq, "Remote should NOT have channel_frequencies commands"
+    assert not has_channel_activation, "Remote should NOT have channel_activation commands"
 
 if __name__ == "__main__":
     print("🧪 Prueba de Integración: Comandos SET en Sistema de Validación")
 
     # Test Master
-    master_result = test_master_set_commands()
+    print("\n" + "="*80)
+    print("Ejecutando test_master_set_commands...")
+    print("="*80)
+    test_master_set_commands()
 
     # Test Remote
-    remote_result = test_remote_set_commands()
+    print("\n" + "="*80)
+    print("Ejecutando test_remote_set_commands...")
+    print("="*80)
+    test_remote_set_commands()
 
     print("\n" + "="*80)
     print("✅ TESTS COMPLETADOS")
     print("="*80)
-    print(f"Master: {master_result['statistics']['total_commands']} comandos totales")
-    print(f"Remote: {remote_result['statistics']['total_commands']} comandos totales")
