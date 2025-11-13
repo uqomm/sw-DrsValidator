@@ -36,7 +36,7 @@ class Colors:
     END = '\033[0m'
 
 class DRSDeployer:
-    def __init__(self, host, port=8089, user="sigmadev", password=None,
+    def __init__(self, host, port=8089, user="root", password=None,
                  branch="feature/ui-fixes-final", remote_dir="/opt/drs-validation",
                  repo_url="https://github.com/arturoSigmadev/sw-DrsValidator.git",
                  dry_run=False):
@@ -129,14 +129,14 @@ class DRSDeployer:
     def check_docker_compose(self):
         """Step 2.5: Check if docker-compose is available"""
         result = self.run_remote_command(
-            "docker compose version &> /dev/null && echo 'OK' || docker-compose --version &> /dev/null && echo 'OK' || echo 'NOT_FOUND'",
-            "Verificando docker-compose"
+            "docker compose version 2>/dev/null | grep -q 'Docker Compose' && echo 'OK' || echo 'NOT_FOUND'",
+            "Verificando docker compose"
         )
         if result == "OK":
-            self.log("✅ docker-compose disponible", Colors.GREEN)
+            self.log("✅ docker compose disponible", Colors.GREEN)
             return True
         else:
-            self.log("❌ docker-compose no está disponible", Colors.RED)
+            self.log("❌ docker compose no está disponible", Colors.RED)
             return False
 
     def update_repository(self):
@@ -168,7 +168,7 @@ class DRSDeployer:
         """Step 5: Stop existing containers"""
         script = [
             f"cd {self.remote_dir}",
-            f"docker-compose down || true",
+            f"docker compose down || true",
             f"echo 'Containers stopped'"
         ]
         return self.run_remote_script(script, "Deteniendo contenedores existentes")
@@ -177,7 +177,7 @@ class DRSDeployer:
         """Step 6: Build and start containers"""
         script = [
             f"cd {self.remote_dir}",
-            f"docker-compose up -d --build",
+            f"docker compose up -d --build",
             f"echo 'Containers started'"
         ]
         return self.run_remote_script(script, "Construyendo e iniciando contenedores")
@@ -193,7 +193,7 @@ class DRSDeployer:
         """Step 8: Verify deployment with multiple checks"""
         script = [
             f"cd {self.remote_dir}",
-            f"docker-compose ps"
+            f"docker compose ps"
         ]
         self.run_remote_script(script, "Verificando estado de contenedores")
 
@@ -222,7 +222,7 @@ class DRSDeployer:
         """Step 9: Show recent logs"""
         script = [
             f"cd {self.remote_dir}",
-            f"docker-compose logs --tail=10"
+            f"docker compose logs --tail=10"
         ]
         self.log("📋 Últimas líneas del log:", Colors.BLUE)
         result = self.run_remote_script(script, "")
@@ -238,10 +238,10 @@ class DRSDeployer:
         self.log(f"🌐 Acceso al servicio: http://{self.host}:{self.port}", Colors.BLUE)
         print()
         self.log("📊 Comandos útiles:", Colors.BOLD)
-        print(f"   Ver logs:      ssh {self.user}@{self.host} 'cd {self.remote_dir} && docker-compose logs -f'")
-        print(f"   Reiniciar:     ssh {self.user}@{self.host} 'cd {self.remote_dir} && docker-compose restart'")
-        print(f"   Detener:       ssh {self.user}@{self.host} 'cd {self.remote_dir} && docker-compose down'")
-        print(f"   Estado:        ssh {self.user}@{self.host} 'cd {self.remote_dir} && docker-compose ps'")
+        print(f"   Ver logs:      ssh {self.user}@{self.host} 'cd {self.remote_dir} && docker compose logs -f'")
+        print(f"   Reiniciar:     ssh {self.user}@{self.host} 'cd {self.remote_dir} && docker compose restart'")
+        print(f"   Detener:       ssh {self.user}@{self.host} 'cd {self.remote_dir} && docker compose down'")
+        print(f"   Estado:        ssh {self.user}@{self.host} 'cd {self.remote_dir} && docker compose ps'")
         print()
 
     def deploy(self):
@@ -302,8 +302,8 @@ Examples:
                        help="Remote server hostname or IP (default: 192.168.60.140)")
     parser.add_argument("--port", type=int, default=8089,
                        help="Port to expose the service on (default: 8089)")
-    parser.add_argument("--user", default="sigmadev",
-                       help="SSH username (default: sigmadev)")
+    parser.add_argument("--user", default="root",
+                       help="SSH username (default: root)")
     parser.add_argument("--password",
                        help="SSH password (if not provided, uses SSH key authentication)")
     parser.add_argument("--branch", default="feature/ui-fixes-final",
