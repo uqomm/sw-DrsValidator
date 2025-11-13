@@ -13,7 +13,7 @@ pyserial==3.5
 requests==2.31.0
 
 # Web framework and API
-fastapi==0.104.1
+fastapi==0.121.1
 uvicorn[standard]==0.23.2
 jinja2==3.1.2
 python-multipart==0.0.6
