@@ -15,7 +15,7 @@ services:
       # Logs (for debugging)
       - ./logs:/app/logs
       # Development: Live code reload (remove in production)
-      - ./src:/app
+      # - ./src:/app
     environment:
       # Site-specific configuration
       - SITE_ID=${SITE_ID:-development}

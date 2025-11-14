@@ -4,7 +4,7 @@
 
 all:
   vars:
-    ansible_user: sigmadev
+    ansible_user: root
     ansible_become: true
     ansible_become_method: sudo
     ansible_python_interpreter: /usr/bin/python3
@@ -13,7 +13,7 @@ all:
     # Application Configuration
     app_port: 8089
     app_dir: /opt/drs-validation
-    git_repo: https://github.com/arturoSigmadev/sw-DrsValidator.git
+    git_repo: https://github.com/uqomm/sw-DrsValidator.git
     git_branch: main
 
   hosts:

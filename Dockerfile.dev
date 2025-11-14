@@ -20,7 +20,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set environment for development
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/src
 ENV FLASK_ENV=development
 ENV LOG_LEVEL=debug
 
@@ -30,4 +30,4 @@ EXPOSE 5678
 
 # Command to run the app with live reload
 # The code will be mounted via docker-compose volume
-CMD ["uvicorn", "validation_app:app", "--host", "0.0.0.0", "--port", "8080", "--reload", "--reload-dir", "/app"]
+CMD ["uvicorn", "src.validation_app:app", "--host", "0.0.0.0", "--port", "8080", "--reload", "--reload-dir", "/app/src"]

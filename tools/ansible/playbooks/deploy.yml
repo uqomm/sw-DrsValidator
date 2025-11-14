@@ -30,17 +30,17 @@
     - name: Configure port in docker-compose.yml
       replace:
         path: "{{ app_dir }}/docker-compose.yml"
-        regexp: '- "[0-9]*:8080"'
-        replace: '- "{{ app_port }}:8080"'
+        regexp: '- "[0-9]*:8089"'
+        replace: '- "{{ app_port }}:8089"'
 
     - name: Stop existing containers
-      command: docker-compose down
+      command: docker compose down
       args:
         chdir: "{{ app_dir }}"
       ignore_errors: yes
 
     - name: Build and start containers
-      command: docker-compose up -d --build
+      command: docker compose up -d --build
       args:
         chdir: "{{ app_dir }}"
 
@@ -69,7 +69,7 @@
       when: api_test is failed
 
     - name: Show container status
-      command: docker-compose ps
+      command: docker compose ps
       args:
         chdir: "{{ app_dir }}"
       register: containers
