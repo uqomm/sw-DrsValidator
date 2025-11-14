@@ -1,0 +1,419 @@
+/* ============================================
+   UQOMM THEME - AGGRESSIVE OVERRIDES
+   This file MUST be loaded LAST to override all styles
+============================================ */
+
+/* ========================================
+   STEP 1: FIX ALL BACKGROUNDS
+======================================== */
+
+/* Main layout - light gray background */
+body,
+html {
+  background-color: #f5f5f5 !important;
+}
+
+.main-content,
+.page-wrapper,
+.page-content {
+  background-color: #f5f5f5 !important;
+}
+
+/* Container backgrounds - transparent */
+.container,
+.container-fluid,
+.row,
+[class*="col-"] {
+  background-color: transparent !important;
+}
+
+/* Tab content */
+.tab-content,
+.tab-pane {
+  background-color: transparent !important;
+}
+
+/* ========================================
+   STEP 2: CARD STYLES - WHITE CARDS WITH DARK HEADERS
+======================================== */
+
+/* Card containers - WHITE background */
+.card,
+.card-modern,
+div.card-modern,
+div.card {
+  background-color: #FFFFFF !important;
+  border: 1px solid #e0e0e0 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Card headers - DARK background with ORANGE border */
+.card-header,
+.card-modern .card-header,
+div.card-header {
+  background-color: #1F1F1F !important;
+  color: #FFFFFF !important;
+  border-bottom: 2px solid #FF4500 !important;
+}
+
+/* Card bodies - WHITE background */
+.card-body,
+.card-modern .card-body,
+div.card-body {
+  background-color: #FFFFFF !important;
+  color: #1F1F1F !important;
+}
+
+/* Card text and headings */
+.card-header h1,
+.card-header h2,
+.card-header h3,
+.card-header h4,
+.card-header h5,
+.card-header h6 {
+  color: #FFFFFF !important;
+  margin: 0 !important;
+}
+
+/* Card header icons - ORANGE */
+.card-header i,
+.card-header .bi {
+  color: #FF4500 !important;
+}
+
+/* ========================================
+   STEP 3: SIDEBAR - DARK BACKGROUND
+======================================== */
+
+.sidebar {
+  background-color: #1F1F1F !important;
+  color: #FFFFFF !important;
+}
+
+.sidebar-header {
+  background-color: #1F1F1F !important;
+  border-bottom: 1px solid #404040 !important;
+}
+
+.sidebar-brand {
+  color: #FFFFFF !important;
+}
+
+.sidebar-brand:hover {
+  color: #FF4500 !important;
+}
+
+.sidebar-nav .nav-link {
+  color: #AAAAAA !important;
+}
+
+.sidebar-nav .nav-link:hover {
+  background-color: rgba(255, 69, 0, 0.1) !important;
+  color: #FF4500 !important;
+}
+
+.sidebar-nav .nav-link.active {
+  background-color: #FF4500 !important;
+  color: #FFFFFF !important;
+}
+
+/* ========================================
+   STEP 4: BUTTONS - ORANGE PRIMARY
+======================================== */
+
+/* Primary buttons - ORANGE */
+.btn-primary,
+button.btn-primary,
+a.btn-primary,
+.btn-modern.btn-primary,
+button[type="submit"] {
+  background-color: #FF4500 !important;
+  border-color: #FF4500 !important;
+  color: #FFFFFF !important;
+}
+
+.btn-primary:hover,
+button.btn-primary:hover,
+.btn-modern.btn-primary:hover,
+button[type="submit"]:hover {
+  background-color: #e63900 !important;
+  border-color: #e63900 !important;
+  color: #FFFFFF !important;
+}
+
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: #e63900 !important;
+  border-color: #e63900 !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 69, 0, 0.25) !important;
+}
+
+/* Secondary buttons - GRAY */
+.btn-secondary,
+button.btn-secondary {
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
+  color: #FFFFFF !important;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268 !important;
+  border-color: #545b62 !important;
+}
+
+/* Outline buttons */
+.btn-outline-primary {
+  color: #FF4500 !important;
+  border-color: #FF4500 !important;
+  background-color: transparent !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary.active,
+.btn-check:checked + .btn-outline-primary {
+  background-color: #FF4500 !important;
+  border-color: #FF4500 !important;
+  color: #FFFFFF !important;
+}
+
+/* ========================================
+   STEP 5: FORMS - WHITE BACKGROUNDS
+======================================== */
+
+/* Form controls - WHITE background */
+.form-control,
+.form-select,
+.form-control-modern,
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+select,
+textarea {
+  background-color: #FFFFFF !important;
+  color: #1F1F1F !important;
+  border: 1px solid #ced4da !important;
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-control-modern:focus {
+  border-color: #FF4500 !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 69, 0, 0.15) !important;
+  background-color: #FFFFFF !important;
+}
+
+/* Form labels */
+.form-label,
+.form-label-modern,
+label {
+  color: #1F1F1F !important;
+  font-weight: 500 !important;
+}
+
+/* Form groups */
+.form-group,
+.form-group-modern {
+  background-color: transparent !important;
+}
+
+/* ========================================
+   STEP 6: BREADCRUMBS & NAVIGATION
+======================================== */
+
+.breadcrumb {
+  background-color: #ffffff !important;
+  border: 1px solid #e0e0e0 !important;
+  padding: 1rem !important;
+}
+
+.breadcrumb-item {
+  color: #1F1F1F !important;
+}
+
+.breadcrumb-item.active {
+  color: #FF4500 !important;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  color: #6c757d !important;
+}
+
+/* ========================================
+   STEP 7: BADGES & ALERTS
+======================================== */
+
+.badge.bg-primary,
+.badge-primary {
+  background-color: #FF4500 !important;
+  color: #FFFFFF !important;
+}
+
+.badge.bg-info {
+  background-color: #0dcaf0 !important;
+  color: #000000 !important;
+}
+
+.badge.bg-success {
+  background-color: #198754 !important;
+  color: #FFFFFF !important;
+}
+
+.badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #000000 !important;
+}
+
+.badge.bg-danger {
+  background-color: #dc3545 !important;
+  color: #FFFFFF !important;
+}
+
+/* ========================================
+   STEP 8: TEXT COLORS
+======================================== */
+
+.text-primary {
+  color: #FF4500 !important;
+}
+
+.text-dark {
+  color: #1F1F1F !important;
+}
+
+.text-muted {
+  color: #6c757d !important;
+}
+
+/* ========================================
+   STEP 9: PROGRESS BARS
+======================================== */
+
+.progress {
+  background-color: #e9ecef !important;
+}
+
+.progress-bar,
+.progress-bar-modern {
+  background-color: #FF4500 !important;
+}
+
+.progress-modern {
+  background-color: #e9ecef !important;
+}
+
+/* ========================================
+   STEP 10: TERMINAL / LOG OUTPUT
+======================================== */
+
+.log-output,
+.terminal-output,
+pre,
+code.terminal {
+  background-color: #1F1F1F !important;
+  color: #00ff00 !important;
+  border: 1px solid #404040 !important;
+  padding: 1rem !important;
+}
+
+/* ========================================
+   STEP 11: LINKS
+======================================== */
+
+a {
+  color: #FF4500 !important;
+}
+
+a:hover {
+  color: #e63900 !important;
+}
+
+/* ========================================
+   STEP 12: TABLES
+======================================== */
+
+.table {
+  background-color: #FFFFFF !important;
+}
+
+.table thead th {
+  background-color: #1F1F1F !important;
+  color: #FFFFFF !important;
+  border-bottom: 2px solid #FF4500 !important;
+}
+
+.table tbody tr {
+  background-color: #FFFFFF !important;
+}
+
+.table tbody tr:hover {
+  background-color: #f8f9fa !important;
+}
+
+/* ========================================
+   STEP 13: MODALS & DROPDOWNS
+======================================== */
+
+.modal-header {
+  background-color: #1F1F1F !important;
+  color: #FFFFFF !important;
+  border-bottom: 2px solid #FF4500 !important;
+}
+
+.modal-body,
+.modal-content {
+  background-color: #FFFFFF !important;
+  color: #1F1F1F !important;
+}
+
+.dropdown-menu {
+  background-color: #FFFFFF !important;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(255, 69, 0, 0.1) !important;
+  color: #FF4500 !important;
+}
+
+/* ========================================
+   STEP 14: SPINNERS & LOADING
+======================================== */
+
+.spinner-border {
+  color: #FF4500 !important;
+}
+
+.loading-indicator {
+  color: #FF4500 !important;
+}
+
+/* ========================================
+   STEP 15: MISC UTILITIES
+======================================== */
+
+.bg-light {
+  background-color: #f8f9fa !important;
+}
+
+.bg-white {
+  background-color: #FFFFFF !important;
+}
+
+.bg-dark {
+  background-color: #1F1F1F !important;
+}
+
+.bg-primary {
+  background-color: #FF4500 !important;
+}
+
+/* Small text helpers */
+small,
+.small {
+  color: #6c757d !important;
+}
+
+/* Icon colors */
+.bi {
+  color: inherit !important;
+}

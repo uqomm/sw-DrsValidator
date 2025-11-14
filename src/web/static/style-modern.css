@@ -2,50 +2,97 @@
 /* Bootstrap 5 Integration + Icinga Theme Design System */
 /* Version: 2.0 - October 2025 */
 
-@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* UQOMM Fonts - Local */
+@font-face {
+  font-family: 'Oswald';
+  src: url('/static/fonts/oswald-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oswald';
+  src: url('/static/fonts/oswald-medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oswald';
+  src: url('/static/fonts/oswald-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: url('/static/fonts/roboto-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: url('/static/fonts/roboto-medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: url('/static/fonts/roboto-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @import url('https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css');
 
 /* ========================================
-   DESIGN TOKENS - Color System (Icinga Theme)
+   DESIGN TOKENS - Color System (UQOMM Theme)
 ======================================== */
 :root {
-  /* Icinga Color Scheme - Base Colors */
-  --icinga-blue: rgb(16, 38, 59);
-  --icinga-secondary: rgb(255, 80, 0);
-  --icinga-blue-rgb: 16, 38, 59;
-  --icinga-secondary-rgb: 255, 80, 0;
-  --icinga-menu: rgb(87, 87, 86);
+  /* UQOMM Color Scheme - Base Colors */
+  --icinga-blue: #1F1F1F;
+  --icinga-secondary: #FF4500;
+  --icinga-blue-rgb: 31, 31, 31;
+  --icinga-secondary-rgb: 255, 69, 0;
+  --icinga-menu: #1F1F1F;
 
-  /* Primary Colors - Icinga Blue Palette */
-  --color-primary-50: #e8ecf0;
-  --color-primary-100: #c4ced8;
-  --color-primary-200: #9caebe;
-  --color-primary-300: #748ea4;
-  --color-primary-400: #567591;
-  --color-primary-500: #385d7d;
-  --color-primary-600: #325575;
-  --color-primary-700: #2b4a6a;
-  --color-primary-800: #243f60;
-  --color-primary-900: #10263b; /* Icinga Blue */
+  /* Primary Colors - UQOMM Dark Palette */
+  --color-primary-50: #f5f5f5;
+  --color-primary-100: #e5e5e5;
+  --color-primary-200: #d4d4d4;
+  --color-primary-300: #a3a3a3;
+  --color-primary-400: #737373;
+  --color-primary-500: #525252;
+  --color-primary-600: #404040;
+  --color-primary-700: #2e2e2e;
+  --color-primary-800: #262626;
+  --color-primary-900: #1F1F1F; /* UQOMM Dark */
 
-  /* Secondary Colors - Icinga Orange */
-  --color-secondary-50: #fff4ed;
-  --color-secondary-100: #ffe3d1;
-  --color-secondary-200: #ffc4a3;
-  --color-secondary-300: #ff9e6a;
-  --color-secondary-400: #ff6c2f;
-  --color-secondary-500: #ff5000; /* Icinga Orange */
-  --color-secondary-600: #f04400;
-  --color-secondary-700: #c73600;
-  --color-secondary-800: #9e2b00;
-  --color-secondary-900: #7a2100;
+  /* Secondary Colors - UQOMM Orange */
+  --color-secondary-50: #fff7ed;
+  --color-secondary-100: #ffedd5;
+  --color-secondary-200: #fed7aa;
+  --color-secondary-300: #fdba74;
+  --color-secondary-400: #fb923c;
+  --color-secondary-500: #FF4500; /* UQOMM Orange */
+  --color-secondary-600: #e63900;
+  --color-secondary-700: #c73100;
+  --color-secondary-800: #a82a00;
+  --color-secondary-900: #8a2200;
 
   /* Semantic Colors */
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
-  --color-info: #10263b;
+  --color-info: #1F1F1F;
 
   /* Background & Surface */
   --color-bg-primary: #ffffff;
@@ -53,10 +100,10 @@
   --color-bg-tertiary: #f1f5f9;
   --color-surface-primary: #ffffff;
   --color-surface-secondary: #f8fafc;
-  --color-menu-background: rgb(87, 87, 86);
+  --color-menu-background: #1F1F1F;
 
-  /* Text Colors - Icinga Style */
-  --color-text-primary: rgb(16, 38, 59); /* Icinga Blue */
+  /* Text Colors - UQOMM Style */
+  --color-text-primary: #1F1F1F; /* UQOMM Dark */
   --color-text-secondary: #475569;
   --color-text-tertiary: #64748b;
   --color-text-disabled: #94a3b8;
@@ -66,10 +113,11 @@
   /* Border & Shadow */
   --color-border-primary: #e2e8f0;
   --color-border-secondary: #cbd5e1;
-  --color-border-focus: #3b82f6;
+  --color-border-focus: #FF4500;
 
-  /* Typography - Icinga Style */
-  --font-family-primary: 'Century Gothic', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Typography - UQOMM Style */
+  --font-family-primary: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-headings: 'Oswald', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -118,11 +166,18 @@ html {
 }
 
 body {
-  font-family: 'Century Gothic', 'Inter', sans-serif;
+  font-family: var(--font-family-primary);
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   display: flex;
   min-height: 100vh;
+}
+
+/* Headings - UQOMM Oswald Font */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-headings);
+  font-weight: 400;
+  color: var(--color-text-primary);
 }
 
 /* Mobile-first: stack vertically on small screens */
@@ -140,7 +195,7 @@ body {
 .sidebar {
     width: 280px;
     flex-shrink: 0;
-    background: linear-gradient(135deg, #10263b 0%, #1a3a5a 100%);
+    background: var(--icinga-blue);
     border-right: 1px solid var(--color-border-primary);
     display: flex;
     flex-direction: column;
@@ -189,7 +244,7 @@ body {
   font-weight: 700;
   color: white;
   text-decoration: none;
-  font-family: 'Century Gothic', sans-serif;
+  font-family: var(--font-family-headings);
 }
 
 .sidebar-nav {
@@ -204,7 +259,7 @@ body {
   text-decoration: none;
   transition: all var(--transition-fast);
   border-left: 3px solid transparent;
-  font-family: 'Century Gothic', 'Inter', sans-serif;
+  font-family: var(--font-family-primary);
   font-size: 1.05rem; /* Texto un poco más grande */
 }
 
@@ -559,7 +614,7 @@ body {
 .breadcrumb {
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
-    font-family: 'Century Gothic', 'Inter', sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.95rem;
     margin-bottom: 0;
 }

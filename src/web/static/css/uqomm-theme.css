@@ -1,0 +1,342 @@
+/* UQOMM Theme - DRS Validator */
+/* Variables de colores UQOMM */
+:root {
+  /* UQOMM Primary Colors */
+  --uqomm-primary: #FF4500;
+  --uqomm-dark: #1F1F1F;
+  --uqomm-light: #FFFFFF;
+  --uqomm-gray: #AAAAAA;
+  --uqomm-text: #1F1F1F;
+  --uqomm-text-light: #FFFFFF;
+  --uqomm-border: #AAAAAA;
+  
+  /* Override Icinga Colors with UQOMM */
+  --icinga-blue: #1F1F1F;
+  --icinga-secondary: #FF4500;
+  --icinga-blue-rgb: 31, 31, 31;
+  --icinga-secondary-rgb: 255, 69, 0;
+  --icinga-menu: #1F1F1F;
+  
+  /* Override Primary Color Scale with UQOMM Dark */
+  --color-primary-50: #f5f5f5;
+  --color-primary-100: #e5e5e5;
+  --color-primary-200: #d4d4d4;
+  --color-primary-300: #a3a3a3;
+  --color-primary-400: #737373;
+  --color-primary-500: #525252;
+  --color-primary-600: #404040;
+  --color-primary-700: #2e2e2e;
+  --color-primary-800: #262626;
+  --color-primary-900: #1F1F1F; /* UQOMM Dark */
+  
+  /* Override Secondary Color Scale with UQOMM Orange */
+  --color-secondary-50: #fff7ed;
+  --color-secondary-100: #ffedd5;
+  --color-secondary-200: #fed7aa;
+  --color-secondary-300: #fdba74;
+  --color-secondary-400: #fb923c;
+  --color-secondary-500: #FF4500; /* UQOMM Primary */
+  --color-secondary-600: #e63900;
+  --color-secondary-700: #c73100;
+  --color-secondary-800: #a82a00;
+  --color-secondary-900: #8a2200;
+  
+  /* Override Text Colors */
+  --color-text-primary: #1F1F1F;
+  --color-text-secondary: #525252;
+  --color-text-tertiary: #737373;
+  --color-text-on-primary: #FFFFFF;
+  --color-text-on-secondary: #FFFFFF;
+  
+  /* Override Background Colors */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8f8f8;
+  --color-bg-tertiary: #f0f0f0;
+  --color-menu-background: #1F1F1F;
+}
+
+/* Font Face Declarations */
+@font-face {
+  font-family: 'Oswald';
+  src: url('../fonts/oswald-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: url('../fonts/roboto-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Tipografía Global */
+body {
+  font-family: 'Roboto', sans-serif;
+  color: var(--uqomm-text);
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Oswald', sans-serif;
+  color: var(--uqomm-text);
+}
+
+/* Bootstrap Overrides - Primary Color */
+.btn-primary {
+  background-color: var(--uqomm-primary);
+  border-color: var(--uqomm-primary);
+}
+
+.btn-primary:hover {
+  background-color: #e63900;
+  border-color: #e63900;
+}
+
+.btn-primary:focus {
+  box-shadow: 0 0 0 0.2rem rgba(255, 69, 0, 0.25);
+}
+
+.text-primary {
+  color: var(--uqomm-primary) !important;
+}
+
+.bg-primary {
+  background-color: var(--uqomm-primary) !important;
+}
+
+/* Bootstrap Overrides - Dark Theme */
+.bg-dark {
+  background-color: var(--uqomm-dark) !important;
+}
+
+.text-dark {
+  color: var(--uqomm-dark) !important;
+}
+
+.navbar-dark .navbar-brand {
+  color: var(--uqomm-light);
+}
+
+.navbar-dark .navbar-nav .nav-link {
+  color: var(--uqomm-gray);
+}
+
+.navbar-dark .navbar-nav .nav-link:hover {
+  color: var(--uqomm-light);
+}
+
+/* Bootstrap Overrides - Light Theme */
+.bg-light {
+  background-color: var(--uqomm-light) !important;
+}
+
+.text-light {
+  color: var(--uqomm-light) !important;
+}
+
+/* Bootstrap Overrides - Secondary Colors */
+.btn-secondary {
+  background-color: var(--uqomm-gray);
+  border-color: var(--uqomm-gray);
+}
+
+.btn-secondary:hover {
+  background-color: #999999;
+  border-color: #999999;
+}
+
+/* Bootstrap Overrides - Status Colors */
+.text-success {
+  color: #28a745 !important; /* Keep green for success */
+}
+
+.text-warning {
+  color: #ffc107 !important; /* Keep yellow for warning */
+}
+
+.text-danger {
+  color: #dc3545 !important; /* Keep red for danger */
+}
+
+.bg-success {
+  background-color: #28a745 !important;
+}
+
+.bg-warning {
+  background-color: #ffc107 !important;
+}
+
+.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+/* Form Elements */
+.form-control:focus {
+  border-color: var(--uqomm-primary);
+  box-shadow: 0 0 0 0.2rem rgba(255, 69, 0, 0.25);
+}
+
+.form-select:focus {
+  border-color: var(--uqomm-primary);
+  box-shadow: 0 0 0 0.2rem rgba(255, 69, 0, 0.25);
+}
+
+/* Cards */
+.card {
+  border-color: var(--uqomm-border);
+}
+
+.card-header {
+  background-color: var(--uqomm-light);
+  border-bottom-color: var(--uqomm-border);
+}
+
+/* Tables */
+.table thead th {
+  border-bottom-color: var(--uqomm-border);
+  color: var(--uqomm-text);
+}
+
+.table td {
+  border-bottom-color: var(--uqomm-border);
+}
+
+/* Badges */
+.badge {
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Alerts */
+.alert {
+  border-color: var(--uqomm-border);
+}
+
+/* Progress Bars */
+.progress-bar {
+  background-color: var(--uqomm-primary);
+}
+
+/* Links */
+a {
+  color: var(--uqomm-primary);
+}
+
+a:hover {
+  color: #e63900;
+}
+
+/* Custom UQOMM Classes */
+.uqomm-text-primary {
+  color: var(--uqomm-primary);
+}
+
+.uqomm-bg-primary {
+  background-color: var(--uqomm-primary);
+}
+
+.uqomm-text-dark {
+  color: var(--uqomm-dark);
+}
+
+.uqomm-bg-dark {
+  background-color: var(--uqomm-dark);
+}
+
+/* Sidebar Overrides (for index-modern.html) */
+.sidebar {
+  background-color: var(--uqomm-dark) !important;
+}
+
+.sidebar-header {
+  background-color: var(--uqomm-dark) !important;
+}
+
+.sidebar-brand {
+  color: var(--uqomm-light) !important;
+}
+
+.sidebar-nav .nav-link {
+  color: var(--uqomm-gray) !important;
+}
+
+.sidebar-nav .nav-link:hover,
+.sidebar-nav .nav-link.active {
+  background-color: var(--uqomm-primary) !important;
+  color: var(--uqomm-light) !important;
+}
+
+/* Header/Navbar Overrides */
+.navbar,
+.header {
+  background-color: var(--uqomm-dark) !important;
+}
+
+/* Button with Icon Overrides */
+.btn-icon-primary {
+  background-color: var(--uqomm-primary) !important;
+  border-color: var(--uqomm-primary) !important;
+  color: var(--uqomm-light) !important;
+}
+
+.btn-icon-primary:hover {
+  background-color: #e63900 !important;
+  border-color: #e63900 !important;
+}
+
+/* Status Cards */
+.status-card {
+  border-left: 4px solid var(--uqomm-primary) !important;
+}
+
+/* Stats/Metrics Cards */
+.metric-card .metric-value {
+  color: var(--uqomm-primary) !important;
+}
+
+/* Action Buttons */
+button[type="submit"],
+.btn-action {
+  background-color: var(--uqomm-primary) !important;
+  border-color: var(--uqomm-primary) !important;
+  color: var(--uqomm-light) !important;
+}
+
+button[type="submit"]:hover,
+.btn-action:hover {
+  background-color: #e63900 !important;
+  border-color: #e63900 !important;
+}
+
+/* Validation Status Badge Overrides */
+.badge-primary,
+.badge.bg-primary {
+  background-color: var(--uqomm-primary) !important;
+}
+
+/* Active/Selected State */
+.active,
+.selected {
+  background-color: var(--uqomm-primary) !important;
+  color: var(--uqomm-light) !important;
+}
+
+/* Result Header (for result-detail.html) */
+.result-header {
+  background: linear-gradient(135deg, var(--uqomm-dark) 0%, #2e2e2e 100%) !important;
+}
+
+/* Command Cards */
+.command-card:hover {
+  border-left-color: var(--uqomm-primary) !important;
+}
+
+/* Loading/Progress Indicators */
+.spinner-border {
+  color: var(--uqomm-primary) !important;
+}
+
+.loading-bar {
+  background-color: var(--uqomm-primary) !important;
+}
