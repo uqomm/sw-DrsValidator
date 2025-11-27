@@ -32,7 +32,8 @@ from pathlib import Path
 
 def load_env():
     """Cargar variables de entorno desde .env.jira"""
-    env_path = Path(__file__).parent / "planning" / ".env.jira"
+    # Buscar .env.jira en planning/ del proyecto raíz
+    env_path = Path(__file__).parent.parent / "planning" / ".env.jira"
     env_vars = {}
 
     try:
