@@ -13,6 +13,7 @@ Comandos disponibles:
     add-comment              - Agregar comentario a issue
     add-worklog              - Agregar worklog a issue
     get-issue                - Obtener detalles de issue
+    search-issues            - Buscar issues por JQL
     list-projects            - Listar proyectos disponibles
 
 Ejemplos:
@@ -414,6 +415,71 @@ class JiraManager:
             print(f"❌ Error de conexión: {e}")
             return False
 
+    def search_issues(self, jql_query, max_results=10):
+        """Buscar issues usando JQL"""
+        try:
+            params = {
+                "jql": jql_query,
+                "maxResults": max_results,
+                "fields": "summary,status,assignee,issuetype,created,updated,description"
+            }
+            
+            response = self.session.get(
+                f"{self.jira_url}/rest/api/3/search/jql",
+                headers=self.headers,
+                params=params,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                issues = data.get('issues', [])
+                total = data.get('total', 0)
+                
+                print(f"🔍 RESULTADOS DE BÚSQUEDA (mostrando {len(issues)} de {total}):")
+                print("=" * 70)
+                
+                if not issues:
+                    print("❌ No se encontraron issues")
+                    return False
+                
+                for issue in issues:
+                    key = issue['key']
+                    fields = issue['fields']
+                    print(f"\n📋 {key} - {fields['summary']}")
+                    print(f"   📊 Estado: {fields['status']['name']}")
+                    print(f"   🏷️  Tipo: {fields['issuetype']['name']}")
+                    
+                    assignee = fields.get('assignee')
+                    if assignee:
+                        print(f"   👤 Asignado: {assignee.get('displayName', 'N/A')}")
+                    else:
+                        print(f"   👤 Asignado: Sin asignar")
+                    
+                    print(f"   📅 Creado: {fields['created'][:10]}")
+                    print(f"   🔗 URL: {self.jira_url}/browse/{key}")
+                    
+                    # Mostrar descripción si existe
+                    description = fields.get('description')
+                    if description and 'content' in description:
+                        print(f"   📖 Descripción:")
+                        for block in description['content'][:1]:  # Solo primer bloque
+                            if 'content' in block:
+                                for text_block in block['content']:
+                                    if text_block.get('type') == 'text':
+                                        text = text_block['text'][:150]
+                                        print(f"      {text}{'...' if len(text_block['text']) > 150 else ''}")
+                
+                return True
+            else:
+                print(f"❌ Error buscando issues: {response.status_code}")
+                print(f"Respuesta: {response.text[:200]}")
+                return False
+
+        except Exception as e:
+            print(f"❌ Error de conexión: {e}")
+            return False
+
 def main():
     parser = argparse.ArgumentParser(
         description="Jira Manager - Herramienta consolidada para gestión de Jira",
@@ -467,6 +533,11 @@ Ejemplos de uso:
     # Comando list-projects
     subparsers.add_parser('list-projects', help='Listar proyectos disponibles')
 
+    # Comando search-issues
+    search_parser = subparsers.add_parser('search-issues', help='Buscar issues por JQL')
+    search_parser.add_argument('--jql', required=True, help='Query JQL (ej: "key=ID-1267" o "project=SWDM")')
+    search_parser.add_argument('--max-results', type=int, default=10, help='Máximo de resultados (default: 10)')
+
     args = parser.parse_args()
 
     if not args.command:
@@ -506,6 +577,9 @@ Ejemplos de uso:
 
         elif args.command == 'list-projects':
             success = manager.list_projects()
+
+        elif args.command == 'search-issues':
+            success = manager.search_issues(args.jql, args.max_results)
 
         if success:
             print("\n✅ Operación completada exitosamente")

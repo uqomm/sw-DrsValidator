@@ -1,0 +1,26 @@
+TestID,Fecha,Hora,Dispositivo,IP,Comando,Tipo,Modo,Status,ResponseTime_ms,HexFrame,DecodedValue,RangoAceptable,Observaciones,Tester
+TC-001,2025-11-27,14:30:25,VHF-Master,192.168.11.22,device_id,Master,Live,PASS,234,7E070100970000E8357E,Device ID: 0x0097,N/A,ID correcto según documentación,A.Veras
+TC-002,2025-11-27,14:30:28,VHF-Master,192.168.11.22,temperature,Master,Live,PASS,189,7E070100020002FA00D1267E,25.5°C,-10°C a 60°C,Temperatura dentro de rango normal,A.Veras
+TC-003,2025-11-27,14:30:30,VHF-Master,192.168.11.22,software_version,Master,Live,PASS,201,7E07010001010032017E,v2.3.1,N/A,Versión actual del firmware,A.Veras
+TC-004,2025-11-27,14:30:33,VHF-Master,192.168.11.22,voltage_monitor,Master,Live,PASS,198,7E070100020003FA00D03E7E,13.5V,11V a 15V,Voltaje estable,A.Veras
+TC-005,2025-11-27,14:30:35,VHF-Master,192.168.11.22,current_monitor,Master,Live,PASS,205,7E070100020004FA00CF467E,2.1A,0A a 5A,Consumo normal,A.Veras
+TC-006,2025-11-27,14:30:38,VHF-Master,192.168.11.22,pa_temperature,Master,Live,PASS,187,7E070100020005FA00CE5E7E,42.3°C,-10°C a 80°C,PA temperatura normal en operación,A.Veras
+TC-007,2025-11-27,14:30:41,VHF-Master,192.168.11.22,operational_status,Master,Live,PASS,196,7E070100020006FA00CD667E,Online,N/A,Sistema operativo,A.Veras
+TC-008,2025-11-27,14:30:43,VHF-Master,192.168.11.22,alarm_status,Master,Live,PASS,192,7E070100020007FA00CC7E7E,No Alarms,N/A,Sin alarmas activas,A.Veras
+TC-009,2025-11-27,14:30:46,VHF-Master,192.168.11.22,lna_status,Master,Live,PASS,203,7E070100020008FA00CB867E,Active,N/A,LNA funcionando correctamente,A.Veras
+TC-010,2025-11-27,14:30:48,VHF-Master,192.168.11.22,pa_status,Master,Live,PASS,199,7E070100020009FA00CA9E7E,Active,N/A,PA funcionando correctamente,A.Veras
+TC-011,2025-11-27,14:31:15,VHF-Remote,192.168.11.22,remote_status,Remote,Live,PASS,256,7E0701009A0000C81A7E,Connected,N/A,Conexión remota estable,A.Veras
+TC-012,2025-11-27,14:31:18,VHF-Remote,192.168.11.22,remote_temperature,Remote,Live,PASS,198,7E070100020002FA00D1267E,24.8°C,-10°C a 60°C,Temperatura remota normal,A.Veras
+TC-013,2025-11-27,14:31:21,VHF-Remote,192.168.11.22,remote_signal_strength,Remote,Live,PASS,212,7E0701009C0000CA427E,-45 dBm,-100 a -20 dBm,Señal fuerte,A.Veras
+TC-014,2025-11-27,14:31:23,VHF-Remote,192.168.11.22,remote_link_quality,Remote,Live,PASS,207,7E0701009D0000CB5A7E,95%,>70%,Link quality excelente,A.Veras
+TC-015,2025-11-27,14:31:45,VHF-Master,192.168.11.22,set_transmitter_power,Master,Live,PASS,245,7E070200A50000FA00...,25W configured,10W a 50W,Potencia configurada correctamente,A.Veras
+TC-016,2025-11-27,14:31:50,VHF-Master,192.168.11.22,get_transmitter_power,Master,Live,PASS,189,7E070100A60000FA00...,25W,N/A,Verificación de configuración exitosa,A.Veras
+TC-017,2025-11-27,14:32:10,P25-Master,192.168.11.23,device_id,Master,Live,PASS,219,7E070100970000E8357E,Device ID: 0x0145,N/A,P25 Master identificado,A.Veras
+TC-018,2025-11-27,14:32:13,P25-Master,192.168.11.23,temperature,Master,Live,PASS,201,7E070100020002FA00D1267E,28.2°C,-10°C a 60°C,Temperatura P25 normal,A.Veras
+TC-019,2025-11-27,14:32:40,LC500-Master,192.168.11.24,device_id,Master,Live,PASS,225,7E070100970000E8357E,Device ID: 0x0089,N/A,LC500 identificado correctamente,A.Veras
+TC-020,2025-11-27,14:32:43,LC500-Master,192.168.11.24,temperature,Master,Live,PASS,198,7E070100020002FA00D1267E,26.7°C,-10°C a 60°C,LC500 temperatura OK,A.Veras
+TC-021,2025-11-27,14:33:00,VHF-Master,192.168.11.22,hardware_version,Master,Live,PASS,211,7E070100010200320F7E,v1.5.2,N/A,Hardware version actual,A.Veras
+TC-022,2025-11-27,14:33:03,VHF-Master,192.168.11.22,serial_number,Master,Live,PASS,195,7E0701000E000028517E,SN-2025-001543,N/A,Serial number registrado,A.Veras
+TC-023,2025-11-27,14:35:00,VHF-Master,192.168.11.22,device_id,Master,Live,TIMEOUT,3001,N/A,N/A,N/A,Timeout - posible congestión de red,A.Veras
+TC-024,2025-11-27,14:35:10,VHF-Master,192.168.11.22,device_id,Master,Live,PASS,198,7E070100970000E8357E,Device ID: 0x0097,N/A,Retry exitoso,A.Veras
+TC-025,2025-11-27,14:40:00,VHF-Master,192.168.11.22,temperature,Master,Mock,PASS,45,MOCK-FRAME,22.0°C,-10°C a 60°C,Prueba mock para testing,A.Veras
