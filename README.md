@@ -240,6 +240,16 @@ export PYTHONPATH="$(pwd)/src"
 
 ## 📁 Organización de Archivos
 
+### docs/
+Documentación técnica y procedimientos:
+- **FAT_PLANTILLA.md** - ✅ **Factory Acceptance Test completo**
+- **MOP_MANUAL_OPERACIONES.md** - ✅ **Manual de Operaciones y Procedimientos**
+- **validation_results_template.csv** - ✅ **Plantilla CSV para tracking de resultados**
+- `GUIA_TECNICA_COMPLETA.md` - Documentación técnica del framework
+- `GUIA_DEPLOYMENT.md` - Guía de despliegue
+- `JIRA_MANAGER_GUIDE.md` - Guía del gestor de Jira
+- `brandbook.md` - Brandbook UQOMM con paleta de colores y tipografía
+
 ### planning/
 Contiene archivos de planificación, Jira y APIs:
 - `jira_manager.py` - ✅ **Script consolidado para gestión completa de Jira**
@@ -248,20 +258,110 @@ Contiene archivos de planificación, Jira y APIs:
 - `REFACTOR_PLAN*.md` - Planes de refactorización
 - `test_api.ps1` - Scripts de prueba de API
 
+## 📖 Documentación de Pruebas (FAT + MOP)
+
+### 🧪 Factory Acceptance Test (FAT)
+
+El documento **FAT_PLANTILLA.md** proporciona un template completo para pruebas de aceptación:
+
+**Incluye:**
+- ✅ Checklist pre-prueba y condiciones ambientales
+- ✅ Pruebas de comandos Master (identificación, monitoreo, estado, configuración)
+- ✅ Pruebas de comandos Remote (estado, señal, configuración)
+- ✅ Tests de performance (tiempo de respuesta, tasa de éxito, pruebas de estrés)
+- ✅ Pruebas funcionales específicas (LNA, PA, alarmas)
+- ✅ Secciones de firmas y aprobación
+- ✅ Anexos para evidencias y documentación
+
+**Ejemplo de uso:**
+```bash
+# 1. Copiar plantilla
+cp docs/FAT_PLANTILLA.md results/FAT_SITE_001_20251127.md
+
+# 2. Ejecutar validaciones según plantilla
+# 3. Completar resultados en el documento
+# 4. Anexar archivos JSON generados
+# 5. Obtener firmas de aprobación
+```
+
+### 📋 Manual de Operaciones (MOP)
+
+El documento **MOP_MANUAL_OPERACIONES.md** es la guía completa para operadores:
+
+**Secciones principales:**
+1. **Requisitos Previos** - Hardware, software, conocimientos y accesos necesarios
+2. **Procedimientos de Preparación** - Instalación (Docker/manual), configuración de dispositivos
+3. **Procedimientos de Validación** - Mock mode, Live mode, interfaz web, scripts automatizados
+4. **Plantillas de Pruebas** - Templates en Markdown y CSV para documentar casos de prueba
+5. **Análisis de Resultados** - Interpretación de estados, métricas de calidad, scripts de análisis
+6. **Troubleshooting** - Problemas comunes y soluciones, logs de diagnóstico
+7. **Anexos** - Referencias a FAT, protocolos, ejemplos de automatización
+
+**Ejemplo de seguimiento:**
+```bash
+# Seguir el MOP paso a paso:
+# 1. Verificar requisitos (Sección 2)
+# 2. Instalar framework (Sección 3.1)
+# 3. Configurar dispositivos (Sección 3.2)
+# 4. Ejecutar validaciones (Sección 4)
+# 5. Analizar resultados (Sección 6)
+# 6. Documentar en CSV (Sección 5)
+```
+
+### 📊 Template de Resultados CSV
+
+El archivo **validation_results_template.csv** proporciona:
+- 📝 25 casos de prueba de ejemplo con datos realistas
+- 📦 Cobertura de dispositivos VHF, P25 y LC500
+- ⏱️ Métricas de performance (response time, status)
+- 🔍 Observaciones y análisis detallado
+
+**Campos incluidos:**
+- TestID, Fecha, Hora, Dispositivo, IP
+- Comando, Tipo, Modo, Status
+- ResponseTime_ms, HexFrame, DecodedValue
+- RangoAceptable, Observaciones, Tester
+
+**Uso recomendado:**
+```bash
+# 1. Copiar template
+cp docs/validation_results_template.csv results/test_results_$(date +%Y%m%d).csv
+
+# 2. Ejecutar validaciones y registrar resultados
+# 3. Analizar datos con scripts Python o Excel
+# 4. Generar reportes para stakeholders
+```
+
 ### Gestión de Jira con jira_manager.py
 
-El script `jira_manager.py` es la herramienta unificada para todas las operaciones de Jira:
+El script `tools/jira_manager.py` es la herramienta unificada para todas las operaciones de Jira:
 
+**Comandos disponibles:**
 ```bash
-# Script wrapper (recomendado - funciona desde cualquier directorio)
-./jira test-connection
-./jira create-task --type google-drive
-./jira add-comment --issue SWDM-19 --comment "Comentario"
+# Probar conexión con Jira
+python tools/jira_manager.py test-connection
 
-# O directamente con Python
-python jira_manager.py test-connection
-python jira_manager.py create-task --type google-drive
+# Buscar issues por JQL
+python tools/jira_manager.py search-issues --jql "key=ID-1267"
+python tools/jira_manager.py search-issues --jql "project=SWDM AND status='En curso'"
+
+# Obtener detalles de un issue
+python tools/jira_manager.py get-issue --issue SWDM-20
+
+# Agregar comentario
+python tools/jira_manager.py add-comment --issue SWDM-20 --comment "Actualización de progreso"
+
+# Agregar worklog
+python tools/jira_manager.py add-worklog --issue SWDM-20 --time "2h" --comment "Desarrollo de feature"
+
+# Crear tarea
+python tools/jira_manager.py create-task --type custom --summary "Nueva tarea" --description "Descripción"
+
+# Listar proyectos
+python tools/jira_manager.py list-projects
 ```
+
+**Ver guía completa:** [docs/JIRA_MANAGER_GUIDE.md](docs/JIRA_MANAGER_GUIDE.md)
 
 ## 🤝 Contribución
 
@@ -284,4 +384,5 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 ---
 
-*Última actualización: Octubre 2025*
+*Última actualización: Noviembre 2025*  
+*Issue Relacionado: ID-1267 (Documentación FAT + MOP)*
