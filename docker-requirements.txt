@@ -24,7 +24,7 @@ pydantic==2.4.2
 
 # Additional utilities for validation
 aiofiles==23.2.1
-httpx==0.25.0
+httpx==0.28.1
 
 # Development and debugging
 python-dotenv==1.0.0
